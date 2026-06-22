@@ -57,11 +57,18 @@
             class="message"
             :class="message.type === 'user' ? 'user-message' : 'agent-message'"
           >
-            <div class="message-avatar" :class="{ 'agent-logo': message.type === 'agent' }">
+            <div
+              class="message-avatar"
+              :class="{ 'agent-logo': message.type === 'agent' }"
+              :style="message.type === 'agent' && message.agentColor ? { background: message.agentColor } : {}"
+            >
               <svg v-if="message.type === 'user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
+              <div v-else-if="message.agentName" class="agent-initial">
+                {{ message.agentName.charAt(0) }}
+              </div>
               <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5"/>
@@ -69,7 +76,9 @@
               </svg>
             </div>
             <div class="message-body">
-              <div class="message-time">{{ message.timestamp }}</div>
+              <div class="message-time">
+                {{ message.agentName || message.timestamp }}
+              </div>
               <div class="message-text" :class="{ 'processing': message.isProcessing }">
                 {{ message.content }}
               </div>
@@ -86,13 +95,13 @@
             placeholder="输入你的任务或问题，使用 @ 提及特定 Agent"
             class="chat-input"
             rows="3"
-            :disabled="isProcessing"
+            :disabled="chatProcessing"
           ></textarea>
           <div class="input-actions">
             <button
               @click="toggleMentionPicker"
               class="at-btn"
-              :disabled="isProcessing"
+              :disabled="chatProcessing"
             >
               @
             </button>
@@ -147,7 +156,7 @@ import { useModal } from '../../composables/useModal'
 const route = useRoute()
 const { currentTeam: createdTeam } = useAgentSelection()
 const { teams } = useWorkspace()
-const { messages, sendMessage } = useChat()
+const { messages, sendMessage, isProcessing: chatProcessing } = useChat()
 const { openCreateTeamModal } = useModal()
 
 // 获取当前路由中的团队，如果没有则使用创建的团队
@@ -171,7 +180,6 @@ const currentTeam = computed(() => {
 const teamId = computed(() => route.params.teamId)
 const inputText = ref('')
 const chatContent = ref(null)
-const isProcessing = ref(false)
 
 // Mention picker state
 const mentionPickerOpen = ref(false)
@@ -188,16 +196,17 @@ const formatDate = (dateString) => {
 }
 
 const handleSend = async () => {
-  if (!inputText.value.trim() || isProcessing.value) return
+  if (!inputText.value.trim() || chatProcessing.value) return
 
-  isProcessing.value = true
   try {
-    await sendMessage(inputText.value)
+    // 获取当前团队的 agents
+    const agents = currentTeam.value?.agents || []
+    await sendMessage(inputText.value, agents)
     inputText.value = ''
     await nextTick()
     scrollToBottom()
-  } finally {
-    isProcessing.value = false
+  } catch (error) {
+    console.error('发送消息失败:', error)
   }
 }
 
@@ -493,7 +502,6 @@ watch(messages, () => {
 }
 
 .agent-logo {
-  background: linear-gradient(135deg, #5b6cff, #7c3aed);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -503,6 +511,17 @@ watch(messages, () => {
   width: 18px;
   height: 18px;
   stroke: white;
+}
+
+.agent-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
 }
 
 .message-body {
