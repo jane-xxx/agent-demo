@@ -18,9 +18,6 @@
             <div class="member-role">{{ getAgentRole(agent.category) }}</div>
           </div>
           <div class="member-status" :class="agent.status || 'online'"></div>
-          <button class="action-btn status-btn" @click.stop="handleToggleStatus(agent, $event)" :title="agent.status === 'online' ? '设为离线' : '设为在线'">
-            <PowerIcon />
-          </button>
           <button class="action-btn remove-btn" @click.stop="handleRemoveAgent(agent, $event)" title="移除成员">
             <XMarkIcon />
           </button>
@@ -62,12 +59,11 @@ import {
   PaintBrushIcon,
   LightBulbIcon,
   RocketLaunchIcon,
-  PowerIcon,
   XMarkIcon
 } from '@heroicons/vue/24/outline'
 
 const { currentTeam } = useAgentSelection()
-const { updateAgentStatus, removeAgent } = useWorkspace()
+const { removeAgent } = useWorkspace()
 const { openAgentDetailModal, openConfirmDialog } = useModal()
 
 // Get team agents from current team
@@ -112,12 +108,6 @@ const logs = ref(LOG_TEMPLATES.map(log => ({
 
 const handleAgentClick = (agent) => {
   openAgentDetailModal(agent)
-}
-
-const handleToggleStatus = (agent, event) => {
-  event.stopPropagation()
-  const newStatus = agent.status === 'online' ? 'offline' : 'online'
-  updateAgentStatus(agent.id, newStatus)
 }
 
 const handleRemoveAgent = (agent, event) => {
@@ -291,11 +281,6 @@ const handleClearLogs = () => {
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #e0e0e0;
-}
-
-.status-btn:hover {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
 }
 
 .remove-btn:hover {
