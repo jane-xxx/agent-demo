@@ -1,16 +1,13 @@
 import { ref } from 'vue'
 
+// 共享状态（所有组件调用 useModal 都使用同一份状态）
+const isCreateTeamModalOpen = ref(false)
+const isAgentDetailModalOpen = ref(false)
+const isConfirmDialogOpen = ref(false)
+const selectedAgent = ref(null)
+const confirmCallback = ref(null)
+
 export function useModal() {
-  // 模态框状态
-  const isCreateTeamModalOpen = ref(false)
-  const isAgentDetailModalOpen = ref(false)
-  const isConfirmDialogOpen = ref(false)
-
-  // Agent 详情相关
-  const selectedAgent = ref(null)
-
-  // 确认对话框回调
-  const confirmCallback = ref(null)
 
   // 创建团队模态框
   const openCreateTeamModal = () => {
