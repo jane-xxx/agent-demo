@@ -77,7 +77,12 @@
             </div>
             <div class="message-body">
               <div class="message-time">
-                {{ message.agentName || message.timestamp }}
+                <template v-if="message.type === 'agent' && message.agentName">
+                  {{ message.agentName }}
+                </template>
+                <template v-else>
+                  {{ message.timestamp }}
+                </template>
               </div>
               <div class="message-text" :class="{ 'processing': message.isProcessing }">
                 {{ message.content }}

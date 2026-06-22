@@ -1,10 +1,16 @@
 // src/composables/useChat.js
 import { ref } from 'vue'
 
-export function useChat() {
-  const messages = ref([])
-  const isProcessing = ref(false)
+// 全局消息状态（所有组件共享）
+const messages = ref([])
+const isProcessing = ref(false)
 
+// 生成唯一 ID
+const generateId = () => {
+  return Date.now() + Math.random().toString(36).substr(2, 9)
+}
+
+export function useChat() {
   // 模拟 Agent 响应
   const simulateAgentResponse = async (agent, userMessage, previousMessages) => {
     // 模拟每个 Agent 的思考时间
@@ -30,7 +36,7 @@ export function useChat() {
       : defaultResponse(userMessage, agent.name)
 
     return {
-      id: Date.now() + Math.random(),
+      id: generateId(),
       type: 'agent',
       agentId: agent.id,
       agentName: agent.name,
@@ -43,7 +49,7 @@ export function useChat() {
 
   // 发送消息
   const sendMessage = async (content, agents = []) => {
-    if (!content || !content.trim()) {
+    if (!content || !content.trim() || isProcessing.value) {
       return null
     }
 
@@ -51,7 +57,7 @@ export function useChat() {
 
     // 添加用户消息
     const userMessage = {
-      id: Date.now(),
+      id: generateId(),
       type: 'user',
       content: content.trim(),
       timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -61,7 +67,7 @@ export function useChat() {
     // 如果没有 Agent，返回提示
     if (!agents || agents.length === 0) {
       const noAgentMessage = {
-        id: Date.now() + 1,
+        id: generateId(),
         type: 'agent',
         content: '请先选择 Agent 加入您的团队。',
         timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -73,12 +79,11 @@ export function useChat() {
 
     // 按顺序让每个 Agent 处理并回复
     const agentMessages = []
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i]
-
+    for (const agent of agents) {
       // 添加处理中状态
+      const processingId = generateId()
       const processingMessage = {
-        id: Date.now() + i * 1000,
+        id: processingId,
         type: 'agent',
         agentId: agent.id,
         agentName: agent.name,
@@ -93,7 +98,7 @@ export function useChat() {
       const agentMessage = await simulateAgentResponse(agent, content, messages.value)
 
       // 移除处理中消息
-      const processingIndex = messages.value.findIndex(m => m.id === processingMessage.id)
+      const processingIndex = messages.value.findIndex(m => m.id === processingId)
       if (processingIndex !== -1) {
         messages.value.splice(processingIndex, 1)
       }
