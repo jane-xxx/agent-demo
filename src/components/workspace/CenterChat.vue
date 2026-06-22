@@ -108,7 +108,7 @@
             <button
               @click="handleSend"
               class="send-btn"
-              :disabled="!inputText.trim() || isProcessing"
+              :disabled="!inputText.trim() || chatProcessing"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="22" y1="2" x2="11" y2="13"/>
