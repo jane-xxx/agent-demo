@@ -141,12 +141,32 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useChat } from '../../composables/useChat'
 import { useAgentSelection } from '../../composables/useAgentSelection'
+import { useWorkspace } from '../../composables/useWorkspace'
 import { useModal } from '../../composables/useModal'
 
 const route = useRoute()
-const { currentTeam } = useAgentSelection()
+const { currentTeam: createdTeam } = useAgentSelection()
+const { teams } = useWorkspace()
 const { messages, sendMessage } = useChat()
 const { openCreateTeamModal } = useModal()
+
+// 获取当前路由中的团队，如果没有则使用创建的团队
+const currentTeam = computed(() => {
+  const teamId = route.params.teamId
+  if (teamId) {
+    // 从团队列表中查找
+    const found = teams.value.find(t => t.id === parseInt(teamId) || t.id === teamId)
+    if (found) {
+      return {
+        teamId: found.id,
+        name: found.name,
+        agents: found.agents || []
+      }
+    }
+  }
+  // 回退到创建的团队
+  return createdTeam.value
+})
 
 const teamId = computed(() => route.params.teamId)
 const inputText = ref('')
