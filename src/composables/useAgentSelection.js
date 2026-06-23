@@ -87,19 +87,18 @@ const getCategoryColor = (categoryId) => {
 }
 
 // Shared state (outside function to persist across calls)
-const selectedAgents = ref(new Set([1, 2, 3])) // Pre-select first 3 agents
+const selectedAgents = ref(new Set()) // 默认不选中任何 Agent
 const activeCategory = ref('全部')
 const searchQuery = ref('')
 const teamName = ref('')
 const currentTeam = ref(null) // Store current team data
-const teams = ref([]) // Store all teams
 
 export function useAgentSelection() {
   const router = useRouter()
 
-  // Generate unique team ID
+  // Generate unique team ID (与 TeamWorkspace 保持一致)
   const generateTeamId = () => {
-    return 'team-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+    return 'team-' + Date.now().toString().slice(-6)
   }
 
   // Computed
@@ -163,6 +162,11 @@ export function useAgentSelection() {
     searchQuery.value = query
   }
 
+  // 清空选中状态
+  const clearSelection = () => {
+    selectedAgents.value = new Set()
+  }
+
   const createTeam = () => {
     const teamId = generateTeamId()
     const teamData = {
@@ -172,7 +176,9 @@ export function useAgentSelection() {
       createdAt: new Date().toISOString()
     }
     currentTeam.value = teamData
-    console.log('Creating team:', teamData)
+    teamName.value = ''
+    // 清空选中状态
+    clearSelection()
     // Navigate to workspace page
     router.push({ name: 'workspace', params: { teamId } })
   }
@@ -184,7 +190,6 @@ export function useAgentSelection() {
     searchQuery,
     teamName,
     currentTeam,
-    teams,
     // Computed
     filteredAgents,
     selectedAgentsArray,
@@ -201,11 +206,6 @@ export function useAgentSelection() {
     setCategory,
     setSearchQuery,
     createTeam,
-    addTeam: (team) => {
-      teams.value.push(team)
-    },
-    getTeamById: (teamId) => {
-      return teams.value.find(t => t.id === teamId)
-    }
+    clearSelection
   }
 }

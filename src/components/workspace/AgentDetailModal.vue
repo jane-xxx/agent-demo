@@ -12,14 +12,6 @@
             {{ agent.status === 'offline' ? '离线' : '在线' }}
           </div>
         </div>
-        <button class="status-toggle" @click="toggleStatus">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          切换状态
-        </button>
       </div>
 
       <div class="agent-section">
@@ -46,13 +38,31 @@
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label">已完成任务</span>
-            <span class="stat-value">{{ capabilities?.stats?.tasksCompleted || 0 }}</span>
+            <span class="stat-value">{{ agentTasks?.completed || capabilities?.stats?.tasksCompleted || 0 }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">在线时长</span>
-            <span class="stat-value">{{ capabilities?.stats?.onlineHours || 0 }}h</span>
+            <span class="stat-value">{{ agentTasks?.avgResponseTime || capabilities?.stats?.onlineHours || 0 }}h</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">进行中</span>
+            <span class="stat-value">{{ agentTasks?.inProgress || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">响应时间</span>
+            <span class="stat-value">{{ agentTasks?.avgResponseTime || '-' }}</span>
           </div>
         </div>
+      </div>
+
+      <div class="agent-section" v-if="agentTasks?.tasks?.length">
+        <h5 class="section-title">最近任务</h5>
+        <ul class="task-list">
+          <li v-for="task in agentTasks.tasks.slice(0, 5)" :key="task.id" class="task-item" :class="`task-${task.status}`">
+            <span class="task-title">{{ task.title }}</span>
+            <span class="task-time">{{ task.time }}</span>
+          </li>
+        </ul>
       </div>
     </div>
   </BaseModal>
@@ -62,6 +72,7 @@
 import { computed } from 'vue'
 import BaseModal from '../common/BaseModal.vue'
 import { AGENT_CAPABILITIES } from '../../utils/constants'
+import { MOCK_AGENT_TASKS } from '../../utils/mockData'
 import {
   ChatBubbleLeftRightIcon,
   MagnifyingGlassIcon,
@@ -84,13 +95,19 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['toggle-status', 'close'])
+const emit = defineEmits(['close'])
 
 const agent = computed(() => props.selectedAgent)
 
 const capabilities = computed(() => {
   if (!agent.value) return null
   return AGENT_CAPABILITIES[agent.value.id] || null
+})
+
+// 获取 Agent 的任务历史
+const agentTasks = computed(() => {
+  if (!agent.value) return null
+  return MOCK_AGENT_TASKS[agent.value.id] || null
 })
 
 const getAgentIcon = (iconName) => {
@@ -120,10 +137,6 @@ const getAgentRole = (category) => {
   return roles[category] || '团队成员'
 }
 
-const toggleStatus = () => {
-  emit('toggle-status', agent.value?.id)
-}
-
 const close = () => {
   emit('close')
 }
@@ -148,7 +161,7 @@ const close = () => {
 .agent-avatar-large {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,7 +175,7 @@ const close = () => {
   position: absolute;
   inset: 0;
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  border-radius: 50%;
 }
 
 .agent-avatar-large svg {
@@ -201,31 +214,6 @@ const close = () => {
 .agent-status-badge.offline {
   background: rgba(148, 163, 184, 0.15);
   color: #94a3b8;
-}
-
-.status-toggle {
-  padding: 8px 16px;
-  background: rgba(91, 108, 255, 0.15);
-  border: 1px solid rgba(91, 108, 255, 0.3);
-  border-radius: 8px;
-  color: #5b6cff;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-.status-toggle:hover {
-  background: rgba(91, 108, 255, 0.25);
-  border-color: rgba(91, 108, 255, 0.5);
-}
-
-.status-toggle svg {
-  width: 16px;
-  height: 16px;
 }
 
 .agent-section {
@@ -295,5 +283,42 @@ const close = () => {
   font-size: 18px;
   font-weight: 600;
   color: #e0e0e0;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(26, 33, 48, 0.4);
+  border-radius: 6px;
+  border-left: 3px solid;
+}
+
+.task-item.task-completed {
+  border-left-color: #22c55e;
+}
+
+.task-item.task-in_progress {
+  border-left-color: #f59e0b;
+}
+
+.task-title {
+  font-size: 13px;
+  color: #e0e0e0;
+}
+
+.task-time {
+  font-size: 11px;
+  color: #6b7280;
 }
 </style>

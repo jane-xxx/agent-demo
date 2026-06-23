@@ -3,7 +3,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="modal-overlay" @click.self="close">
-        <div class="modal-container">
+        <div :class="['modal-container', customClass]">
           <div class="modal-header">
             <h3 class="modal-title">{{ title }}</h3>
             <button class="modal-close" @click="close">
@@ -29,6 +29,10 @@ defineProps({
     required: true
   },
   title: {
+    type: String,
+    default: ''
+  },
+  customClass: {
     type: String,
     default: ''
   }
@@ -64,11 +68,15 @@ const close = () => {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
+.modal-container.modal-wide {
+  max-width: 520px;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -104,9 +112,9 @@ const close = () => {
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 12px;
   overflow-y: auto;
-  max-height: calc(90vh - 73px);
+  max-height: calc(90vh - 61px);
 }
 
 .modal-enter-active,

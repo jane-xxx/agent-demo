@@ -1,33 +1,51 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAgentSelection } from './useAgentSelection'
+import { MOCK_TEAMS } from '../utils/mockData'
+
+// LocalStorage key
+const TEAMS_STORAGE_KEY = 'multiagent_teams'
+
+// 从 localStorage 加载团队数据
+const loadTeamsFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(TEAMS_STORAGE_KEY)
+    console.log('从 localStorage 加载团队数据:', stored ? '找到数据' : '无数据')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      console.log('解析后的团队数量:', parsed?.length)
+      // 如果有存储的数据，使用存储的数据
+      if (parsed && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch (error) {
+    console.error('加载团队数据失败:', error)
+  }
+  // 默认返回 mock 数据
+  console.log('使用默认 mock 数据，数量:', MOCK_TEAMS.length)
+  return [...MOCK_TEAMS]
+}
+
+// 保存团队数据到 localStorage
+const saveTeamsToStorage = (teams) => {
+  try {
+    const data = JSON.stringify(teams)
+    console.log('保存团队数据到 localStorage, 数量:', teams.length)
+    localStorage.setItem(TEAMS_STORAGE_KEY, data)
+    console.log('保存成功，存储的键:', TEAMS_STORAGE_KEY)
+  } catch (error) {
+    console.error('保存团队数据失败:', error)
+  }
+}
+
+// 将 teams 定义在函数外部，确保所有组件共享同一个状态
+const teams = ref(loadTeamsFromStorage())
+const searchQuery = ref('')
 
 export function useWorkspace() {
   const router = useRouter()
   const { currentTeam } = useAgentSelection()
-
-  // 所有团队列表（包含当前团队和静态示例团队）
-  const teams = ref([
-    {
-      id: 2,
-      name: '数据分析团队',
-      subtitle: '2小时前',
-      memberCount: 4,
-      color: 'linear-gradient(135deg, #00b894, #00cec9)',
-      agents: []
-    },
-    {
-      id: 3,
-      name: '设计创意团队',
-      subtitle: '昨天',
-      memberCount: 5,
-      color: 'linear-gradient(135deg, #d63031, #e17055)',
-      agents: []
-    }
-  ])
-
-  // 搜索关键词
-  const searchQuery = ref('')
 
   // 过滤后的团队列表
   const filteredTeams = computed(() => {
@@ -74,7 +92,36 @@ export function useWorkspace() {
 
   // 添加新团队到列表
   const addTeam = (team) => {
+    console.log('添加新团队:', team.name, 'ID:', team.id)
     teams.value.unshift(team)
+    console.log('添加后的团队数量:', teams.value.length)
+    saveTeamsToStorage(teams.value)
+  }
+
+  // 删除团队
+  const deleteTeam = (teamId) => {
+    console.log('删除团队:', teamId)
+    const index = teams.value.findIndex(t => t.id === teamId)
+    if (index !== -1) {
+      teams.value.splice(index, 1)
+      saveTeamsToStorage(teams.value)
+      console.log('删除成功，剩余团队数量:', teams.value.length)
+      return true
+    }
+    return false
+  }
+
+  // 重命名团队
+  const renameTeam = (teamId, newName) => {
+    console.log('重命名团队:', teamId, '新名称:', newName)
+    const team = teams.value.find(t => t.id === teamId)
+    if (team) {
+      team.name = newName
+      saveTeamsToStorage(teams.value)
+      console.log('重命名成功')
+      return true
+    }
+    return false
   }
 
   // 切换团队
@@ -105,13 +152,49 @@ export function useWorkspace() {
     }
   }
 
+  // 清除所有团队数据（包括 localStorage）
+  const clearAllTeams = () => {
+    teams.value = [...MOCK_TEAMS]
+    localStorage.removeItem(TEAMS_STORAGE_KEY)
+    console.log('已清除所有自定义团队，恢复为默认数据')
+  }
+
+  // 手动保存到 localStorage
+  const forceSave = () => {
+    saveTeamsToStorage(teams.value)
+    console.log('手动保存完成')
+  }
+
+  // 获取存储信息
+  const getStorageInfo = () => {
+    try {
+      const stored = localStorage.getItem(TEAMS_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return {
+          hasData: true,
+          count: parsed.length,
+          keys: parsed.map(t => t.id)
+        }
+      }
+      return { hasData: false }
+    } catch (error) {
+      return { hasData: false, error: error.message }
+    }
+  }
+
   return {
     teams,
     searchQuery,
     filteredTeams,
     addTeam,
+    deleteTeam,
+    renameTeam,
     switchTeam,
     updateAgentStatus,
-    removeAgent
+    removeAgent,
+    clearAllTeams,
+    forceSave,
+    getStorageInfo
   }
 }
