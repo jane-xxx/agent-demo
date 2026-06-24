@@ -1,10 +1,43 @@
 <template>
   <div class="response-renderer">
+    <!-- Composite 类型 - 组合多种内容 -->
+    <div v-if="responseType === 'composite' && data?.items?.length" class="composite-response">
+      <template v-for="(item, index) in data.items">
+        <!-- 第一个 item（通常是文字）- 始终显示，支持打字机效果 -->
+        <div
+          v-if="item && item.type && index === 0"
+          :key="`composite-${index}`"
+          class="composite-item"
+        >
+          <ResponseRenderer
+            :response-type="item.type"
+            :data="item.data"
+            :enable-typewriter="enableTypewriter"
+            @typing-complete="onFirstItemTypingComplete"
+          />
+        </div>
+        <!-- 后续 item（图表、表格等）- 等待第一个 item 的打字完成后再渲染 -->
+        <div
+          v-else-if="item && item.type && (!enableTypewriter || firstItemTypingComplete)"
+          :key="`composite-${index}`"
+          class="composite-item"
+        >
+          <ResponseRenderer
+            :response-type="item.type"
+            :data="item.data"
+            :enable-typewriter="false"
+          />
+        </div>
+      </template>
+    </div>
+
     <!-- Text 类型 - 支持打字机效果 -->
-    <div v-if="responseType === 'text'" class="text-response">
-      <span v-if="isTyping" class="typing-text">{{ displayedText }}</span>
-      <span v-else v-html="renderedContent"></span>
-      <span v-if="isTyping" class="cursor">|</span>
+    <div v-else-if="responseType === 'text'" class="text-response">
+      <template v-if="isTyping">
+        <span class="typing-text">{{ displayedText }}</span>
+        <span class="cursor">|</span>
+      </template>
+      <div v-else v-html="renderedContent"></div>
     </div>
 
     <!-- Code 类型 -->
@@ -13,7 +46,7 @@
         <span class="language-tag">{{ data?.language || 'text' }}</span>
       </div>
       <pre class="code-block"><code>{{ data?.code || 'No code content' }}</code></pre>
-      <p v-if="data?.explanation" class="code-explanation">{{ data.explanation }}</p>
+      <p v-if="data?.explanation && data.explanation.trim()" class="code-explanation">{{ data.explanation }}</p>
     </div>
 
     <!-- Table 类型 -->
@@ -30,19 +63,19 @@
           </tr>
         </tbody>
       </table>
-      <p v-if="data.caption" class="table-caption">{{ data.caption }}</p>
+      <p v-if="data.caption && data.caption.trim()" class="table-caption">{{ data.caption }}</p>
     </div>
 
     <!-- Chart 类型 (Mermaid) -->
     <div v-else-if="responseType === 'chart'" class="chart-response">
       <div v-html="renderedChart"></div>
-      <p v-if="data.caption" class="chart-caption">{{ data.caption }}</p>
+      <p v-if="data.caption && data.caption.trim()" class="chart-caption">{{ data.caption }}</p>
     </div>
 
     <!-- Formula 类型 (LaTeX) -->
     <div v-else-if="responseType === 'formula'" class="formula-response">
       <div v-for="(formula, i) in data.formulas" :key="i" class="formula-item" v-html="renderFormula(formula)"></div>
-      <p v-if="data.explanation" class="formula-explanation">{{ data.explanation }}</p>
+      <p v-if="data.explanation && data.explanation.trim()" class="formula-explanation">{{ data.explanation }}</p>
     </div>
 
     <!-- Image 类型 -->
@@ -97,8 +130,16 @@
       <p v-if="data?.caption && !imageError" class="image-caption">{{ data.caption }}</p>
     </div>
 
-    <!-- Fallback -->
-    <div v-else class="text-response">{{ data.content || 'Empty response' }}</div>
+    <!-- Document 类型 -->
+    <div v-else-if="responseType === 'document' && data?.sections?.length" class="document-response">
+      <div v-for="(section, i) in data.sections" :key="i" class="document-section">
+        <h3 v-if="section.title">{{ section.title }}</h3>
+        <p v-if="section.content">{{ section.content }}</p>
+      </div>
+    </div>
+
+    <!-- Fallback - 不显示空内容 -->
+    <div v-else-if="data?.content" class="text-response">{{ data.content }}</div>
   </div>
 
   <!-- 查看大图模态框 - 移到外面 -->
@@ -112,7 +153,7 @@
       </button>
       <div class="lightbox-content" @click.stop>
         <img :src="data?.url" :alt="data?.alt || 'Generated image'" class="lightbox-image" />
-        <div v-if="data?.caption" class="lightbox-caption">{{ data.caption }}</div>
+        <div v-if="data?.caption && data.caption.trim()" class="lightbox-caption">{{ data.caption }}</div>
         <button @click="downloadImage" class="lightbox-download">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -132,6 +173,9 @@ import { RESPONSE_TYPES } from '../../utils/responseTypes'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
+// Self-reference for composite rendering
+import ResponseRenderer from './ResponseRenderer.vue'
+
 const props = defineProps({
   responseType: {
     type: String,
@@ -144,9 +188,24 @@ const props = defineProps({
   // 是否启用打字机效果
   enableTypewriter: {
     type: Boolean,
-    default: true
+    default: false
+  },
+  // 消息 ID，用于标识哪个消息的打字完成了
+  messageId: {
+    type: String,
+    default: ''
   }
 })
+
+const emit = defineEmits(['typing-complete'])
+
+// 组合响应中第一项的打字完成状态
+const firstItemTypingComplete = ref(!props.enableTypewriter) // 默认完成（如果不启用打字机）
+
+// 监听 enableTypewriter 变化，重置状态
+watch(() => props.enableTypewriter, (newValue) => {
+  firstItemTypingComplete.value = !newValue
+}, { immediate: false })
 
 // 不再需要 typing 事件，因为我们不再自动滚动
 
@@ -207,12 +266,19 @@ const downloadImage = async () => {
 
 // 打字机效果
 const startTyping = (text) => {
-  // 始终先设置渲染后的内容，确保即使打字机效果有问题，内容也能正确显示
-  renderedContent.value = renderMarkdown(text)
+  // 停止之前的打字机效果
+  stopTyping()
 
   if (!props.enableTypewriter) {
+    // 不启用打字机效果，直接显示渲染后的内容
+    renderedContent.value = renderMarkdown(text)
+    isTyping.value = false
+    displayedText.value = ''
     return
   }
+
+  // 预先渲染内容，打字完成后直接显示
+  renderedContent.value = renderMarkdown(text)
 
   isTyping.value = true
   displayedText.value = ''
@@ -226,11 +292,19 @@ const startTyping = (text) => {
       const speed = 20 + Math.random() * 30
       typingTimer.value = setTimeout(typeNextChar, speed)
     } else {
+      // 打字完成，隐藏打字机效果，显示渲染后的内容
       isTyping.value = false
+      // 发射完成事件，带上消息 ID
+      emit('typing-complete', props.messageId)
     }
   }
 
   typeNextChar()
+}
+
+// 处理第一项打字完成
+const onFirstItemTypingComplete = () => {
+  firstItemTypingComplete.value = true
 }
 
 // 清理打字机定时器
@@ -240,6 +314,7 @@ const stopTyping = () => {
     typingTimer.value = null
   }
   isTyping.value = false
+  displayedText.value = ''
 }
 
 // 渲染 Mermaid 图表
@@ -297,21 +372,32 @@ const renderMarkdown = (content) => {
     .replace(/\n/g, '<br>')
 }
 
-// 监听变化
+// 监听数据变化 - 历史消息不需要深度监听
 watch(() => props.data, (newData) => {
   stopTyping()  // 先停止任何正在进行的打字机效果
-  if (props.responseType === RESPONSE_TYPES.TEXT && newData?.content) {
-    // 添加防抖，确保内容稳定后再开始打字
+
+  // 只有启用打字机效果时才执行打字逻辑
+  if (props.enableTypewriter && props.responseType === RESPONSE_TYPES.TEXT && newData?.content) {
     nextTick(() => {
       startTyping(newData.content)
     })
+  } else if (props.responseType === RESPONSE_TYPES.TEXT && newData?.content) {
+    // 历史消息直接渲染，不启动打字机效果
+    renderedContent.value = renderMarkdown(newData.content)
+    isTyping.value = false
+    displayedText.value = ''
   }
-  // 重置图片加载状态
-  if (props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
+
+  // 重置图片加载状态（只有新消息才需要动态更新图片状态）
+  if (props.enableTypewriter && props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
     imageLoading.value = true
     imageError.value = false
+  } else if (props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
+    // 历史消息的图片直接设置为已加载状态，避免触发加载动画
+    imageLoading.value = false
+    imageError.value = false
   }
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 watch(() => props.responseType, (newType) => {
   if (newType === RESPONSE_TYPES.CHART) {
@@ -320,9 +406,14 @@ watch(() => props.responseType, (newType) => {
 }, { immediate: true })
 
 onMounted(() => {
-  if (props.responseType === RESPONSE_TYPES.TEXT && props.data.content) {
+  // 只有启用打字机效果的新消息才启动打字机
+  if (props.enableTypewriter && props.responseType === RESPONSE_TYPES.TEXT && props.data.content) {
     startTyping(props.data.content)
+  } else if (props.responseType === RESPONSE_TYPES.TEXT && props.data.content) {
+    // 历史消息直接渲染内容
+    renderedContent.value = renderMarkdown(props.data.content)
   }
+
   if (props.responseType === RESPONSE_TYPES.CHART) {
     renderChart()
   }
@@ -338,6 +429,14 @@ onMounted(() => {
       })
     })
   }
+
+  // 如果启用打字机效果但不是 TEXT 类型，立即发射完成事件
+  // 这样组合响应中的后续 item 可以正常显示
+  if (props.enableTypewriter && props.responseType !== RESPONSE_TYPES.TEXT) {
+    nextTick(() => {
+      emit('typing-complete')
+    })
+  }
 })
 
 onBeforeUnmount(() => {
@@ -351,6 +450,29 @@ onBeforeUnmount(() => {
 <style scoped>
 .response-renderer {
   width: 100%;
+  max-width: 600px;
+}
+
+/* Composite Response */
+.composite-response {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.composite-item {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Text Response */
@@ -408,6 +530,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 600px;
 }
 
 .code-header {
@@ -456,6 +579,7 @@ onBeforeUnmount(() => {
 /* Table Response */
 .table-response {
   overflow-x: auto;
+  max-width: 600px;
 }
 
 .table-response table {
@@ -502,6 +626,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  max-width: 600px;
 }
 
 .chart-response :deep(.mermaid-wrapper) {
@@ -540,6 +665,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 600px;
 }
 
 .formula-item {
@@ -585,13 +711,14 @@ onBeforeUnmount(() => {
 
 .image-wrapper {
   position: relative;
-  display: inline-block;
-  width: 600px;
+  display: block;
+  width: 100%;
+  max-width: 600px;
   height: 450px;
 }
 
 .image-response img {
-  width: 600px;
+  width: 100%;
   height: 450px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -806,6 +933,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 600px;
 }
 
 .document-section {

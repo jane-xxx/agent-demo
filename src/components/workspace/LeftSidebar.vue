@@ -85,6 +85,15 @@
       </div>
     </div>
 
+    <!-- 自定义确认删除弹窗 -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="确认删除"
+      :message="deleteConfirmMessage"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
+
     <div class="sidebar-footer">
       <div class="user-profile">
         <div class="user-avatar">
@@ -108,6 +117,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAgentSelection } from '../../composables/useAgentSelection'
 import { useWorkspace } from '../../composables/useWorkspace'
 import { useModal } from '../../composables/useModal'
+import ConfirmDialog from '../common/ConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -125,6 +135,11 @@ const editingTeamId = ref(null)
 const editingName = ref('')
 // 编辑输入框引用
 let editInput = null
+
+// 删除确认弹窗状态
+const showDeleteConfirm = ref(false)
+const deleteConfirmMessage = ref('')
+const pendingDeleteTeam = ref(null)
 
 // 当前下拉菜单对应的团队
 const currentDropdownTeam = computed(() => {
@@ -234,18 +249,36 @@ const handleRename = (team) => {
 // 处理删除
 const handleDelete = (team) => {
   if (!team) return
-  if (confirm(`确定要删除团队"${team.name}"吗？此操作不可恢复。`)) {
-    const success = deleteTeam(team.id)
+  // 显示自定义确认弹窗
+  pendingDeleteTeam.value = team
+  deleteConfirmMessage.value = `确定要删除团队"${team.name}"吗？此操作不可恢复。`
+  showDeleteConfirm.value = true
+  closeMenu()
+}
+
+// 确认删除
+const confirmDelete = () => {
+  if (pendingDeleteTeam.value) {
+    const isCurrentTeam = pendingDeleteTeam.value.id === currentTeamId.value
+    const success = deleteTeam(pendingDeleteTeam.value.id)
     if (success) {
       console.log('删除成功')
-      closeMenu()
 
-      // 如果删除的是当前团队，跳转到首页
-      if (team.id === currentTeamId.value) {
-        router.push({ name: 'home' })
+      // 如果删除的是当前团队，导航到工作台空状态
+      if (isCurrentTeam) {
+        router.push({ name: 'workspace' })
       }
     }
   }
+  // 重置状态
+  pendingDeleteTeam.value = null
+  showDeleteConfirm.value = false
+}
+
+// 取消删除
+const cancelDelete = () => {
+  pendingDeleteTeam.value = null
+  showDeleteConfirm.value = false
 }
 
 // 点击其他地方关闭菜单

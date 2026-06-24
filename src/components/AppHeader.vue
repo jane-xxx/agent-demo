@@ -14,7 +14,7 @@
             </defs>
           </svg>
         </div>
-        <span class="logo-text">MultiAgent</span>
+        <span class="logo-text">Agent</span>
       </div>
       <div class="header-actions">
         <button class="search-btn">

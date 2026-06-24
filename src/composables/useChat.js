@@ -133,134 +133,190 @@ const saveTeamData = (teamId) => {
 }
 
 // ============================================
-// 结构化响应生成器
+// 静态响应模板
 // ============================================
 
-// 生成文本响应
-const generateTextResponse = (content) => ({
-  responseType: RESPONSE_TYPES.TEXT,
-  data: { content }
-})
+// 静态响应模板库 - 每个类型都有预定义的响应
+const STATIC_RESPONSE_TEMPLATES = {
+  code: [
+    {
+      responseType: RESPONSE_TYPES.CODE,
+      data: {
+        language: 'typescript',
+        code: `// Code Agent - 解决方案\n\ninterface Solution {\n  approach: string\n  complexity: string\n  notes: string\n}\n\nconst solution: Solution = {\n  approach: '使用 TypeScript 泛型确保类型安全',\n  complexity: 'O(n log n)',\n  notes: '适用于大规模数据处理场景'\n}\n\nfunction implement<T>(input: T[]): T[] {\n  return input\n    .filter(item => item !== null)\n    .map(item => transform(item))\n}\n\nfunction transform<T>(item: T): T {\n  return { ...item, processed: true }\n}`,
+        explanation: '这是一个类型安全的实现方案，使用泛型确保代码的可复用性。'
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          { title: '技术方案', content: '采用模块化架构，确保代码可维护性。主要优势：清晰的职责划分、易于测试和扩展。' },
+          { title: '实现要点', content: '1. 使用 TypeScript 类型系统 2. 遵循 SOLID 原则 3. 编写单元测试' },
+          { title: '最佳实践', content: '建议配合 ESLint 和 Prettier 使用，确保代码风格一致。' }
+        ]
+      }
+    }
+  ],
+  search: [
+    {
+      responseType: RESPONSE_TYPES.TABLE,
+      data: {
+        headers: ['项目', '现状', '趋势', '建议'],
+        rows: [
+          ['市场规模', '2024年达50亿美元', '年增长25%', '重点关注'],
+          ['竞品格局', '头部占60%份额', '整合加速', '差异化突破'],
+          ['用户需求', '追求效率提升', '个性化需求增强', '定制化服务']
+        ],
+        caption: '市场调研分析结果'
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          { title: '调研结论', content: '市场呈现快速增长态势，头部效应明显。建议聚焦垂直细分市场。' },
+          { title: '关键洞察', content: '用户对个性化、智能化功能的需求最为迫切，这是产品差异化的重要机会点。' },
+          { title: '行动建议', content: '优先布局高增长潜力的细分领域，同时建立产品竞争壁垒。' }
+        ]
+      }
+    }
+  ],
+  document: [
+    {
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          { title: '文档概述', content: '本文档提供了清晰的结构化内容，帮助用户快速理解核心信息。' },
+          { title: '主要内容', content: '包含背景介绍、详细说明、注意事项等关键部分，确保信息传达准确完整。' },
+          { title: '使用建议', content: '建议按顺序阅读，特别关注标注的重要提示部分。' }
+        ]
+      }
+    }
+  ],
+  chart: [
+    {
+      responseType: RESPONSE_TYPES.FORMULA,
+      data: {
+        formulas: [
+          '\\text{增长率} = \\frac{\\text{当前值} - \\text{基准值}}{\\text{基准值}} \\times 100\\%',
+          '\\text{效率} = \\frac{\\text{输出}}{\\text{输入}} \\times 100\\%'
+        ],
+        explanation: '根据数据分析，整体效率提升约25%，增长率保持稳定。'
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.TABLE,
+      data: {
+        headers: ['指标', '数值', '目标', '达成率'],
+        rows: [
+          ['转化率', '18.5%', '20%', '92.5%'],
+          ['留存率', '45.2%', '50%', '90.4%'],
+          ['满意度', '4.2/5', '4.5/5', '93.3%']
+        ],
+        caption: '核心指标监控数据'
+      }
+    }
+  ],
+  palette: [
+    {
+      responseType: RESPONSE_TYPES.IMAGE,
+      data: {
+        url: 'https://picsum.photos/seed/design1/800/500',
+        alt: '设计稿展示'
+      }
+    }
+  ],
+  lightbulb: [
+    {
+      responseType: RESPONSE_TYPES.TEXT,
+      data: {
+        content: `**创意思考**\n\n关于这个需求，我认为关键在于找到突破口：\n\n1. **问题本质**：从用户体验角度重新审视需求\n2. **创新方向**：结合行业最佳实践\n3. **实施路径**：分阶段验证迭代\n\n建议优先从最简单的方案开始，快速验证核心假设。`
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.TABLE,
+      data: {
+        headers: ['方案', '创新度', '可行性', '预期效果'],
+        rows: [
+          ['方案A', '高', '中', '显著提升'],
+          ['方案B', '中', '高', '稳步改善'],
+          ['方案C', '低', '高', '小幅优化']
+        ],
+        caption: '方案对比分析'
+      }
+    }
+  ],
+  rocket: [
+    {
+      responseType: RESPONSE_TYPES.TABLE,
+      data: {
+        headers: ['阶段', '时间', '关键里程碑'],
+        rows: [
+          ['Q1 - 规划', '1-3月', '完成需求分析和方案设计'],
+          ['Q2 - 开发', '4-6月', '核心功能上线'],
+          ['Q3 - 验证', '7-9月', '完成用户测试和优化'],
+          ['Q4 - 推广', '10-12月', '全量发布和运营']
+        ],
+        caption: '产品路线图'
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          { title: '战略定位', content: '聚焦核心用户群体，打造差异化竞争优势。' },
+          { title: '增长策略', content: '通过产品创新和精细化运营实现可持续增长。' },
+          { title: '风险控制', content: '建立完善的风险评估和应对机制。' }
+        ]
+      }
+    }
+  ],
+  chat: [
+    {
+      responseType: RESPONSE_TYPES.COMPOSITE,
+      data: {
+        items: [
+          {
+            type: RESPONSE_TYPES.TEXT,
+            data: { content: '我从多个角度为您分析这个问题：' }
+          },
+          {
+            type: RESPONSE_TYPES.TABLE,
+            data: {
+              headers: ['角度', '分析', '建议'],
+              rows: [
+                ['技术', '可行性高', '优先实现'],
+                ['成本', '投入可控', '分阶段投入'],
+                ['时间', '周期适中', '并行推进']
+              ],
+              caption: '多维度分析'
+            }
+          },
+          {
+            type: RESPONSE_TYPES.TEXT,
+            data: { content: '\n\n综合来看，建议采用渐进式实施策略，确保风险可控。' }
+          }
+        ]
+      }
+    },
+    {
+      responseType: RESPONSE_TYPES.TEXT,
+      data: {
+        content: `**综合分析**\n\n这个问题涉及多个层面，我建议：\n\n• **短期**：快速验证核心假设\n• **中期**：优化和完善解决方案\n• **长期**：建立可持续的竞争优势\n\n需要更详细的某个方面分析吗？`
+      }
+    }
+  ]
+}
 
-// 生成代码响应
-const generateCodeResponse = (language, code, explanation) => ({
-  responseType: RESPONSE_TYPES.CODE,
-  data: { language, code, explanation }
-})
-
-// 生成表格响应
-const generateTableResponse = (headers, rows, caption) => ({
-  responseType: RESPONSE_TYPES.TABLE,
-  data: { headers, rows, caption }
-})
-
-// 生成图表响应
-const generateChartResponse = (diagram, caption) => ({
-  responseType: RESPONSE_TYPES.CHART,
-  data: { diagram, caption }
-})
-
-// 生成公式响应
-const generateFormulaResponse = (formulas, explanation) => ({
-  responseType: RESPONSE_TYPES.FORMULA,
-  data: { formulas, explanation }
-})
-
-// 生成图片响应
-const generateImageResponse = (url, alt, caption) => ({
-  responseType: RESPONSE_TYPES.IMAGE,
-  data: { url, alt, ...(caption && { caption }) }
-})
-
-// 生成文档响应
-const generateDocumentResponse = (sections) => ({
-  responseType: RESPONSE_TYPES.DOCUMENT,
-  data: { sections }
-})
-
-// 根据 Agent 和用户消息生成响应
+// 根据 Agent 图标从静态模板中随机选择响应
 const generateStructuredResponse = (agent, userMessage) => {
-  const supportedTypes = getAgentResponseTypes(agent.icon)
+  const templates = STATIC_RESPONSE_TEMPLATES[agent.icon] || STATIC_RESPONSE_TEMPLATES.chat
 
-  // 为特定 Agent 优先选择特定类型
-  let selectedType
-  if (agent.icon === 'palette') {
-    // Design Agent 优先返回图片
-    selectedType = RESPONSE_TYPES.IMAGE
-  } else if (agent.icon === 'chart') {
-    // Data Analyst 优先返回公式
-    selectedType = RESPONSE_TYPES.FORMULA
-  } else if (agent.icon === 'code') {
-    // Code Agent 优先返回代码
-    selectedType = RESPONSE_TYPES.CODE
-  } else {
-    // 其他 Agent 随机选择
-    selectedType = randomFrom(supportedTypes)
-  }
+  // 深拷贝模板，避免修改原数据
+  const selectedTemplate = JSON.parse(JSON.stringify(randomFrom(templates)))
 
-  switch (selectedType) {
-    case RESPONSE_TYPES.CODE:
-      return generateCodeResponse(
-        'typescript',
-        `// ${agent.name} 为您生成的代码\n\nfunction solve${Date.now()}() {\n  // 实现方案\n  const result = process("${userMessage}")\n  return result\n}\n\n// 这段代码处理了: ${userMessage}`,
-        '这是一个基础实现，可根据具体需求进一步优化。'
-      )
-
-    case RESPONSE_TYPES.TABLE:
-      return generateTableResponse(
-        ['项目', '状态', '进度'],
-        [
-          ['需求分析', '已完成', '100%'],
-          ['方案设计', '进行中', '60%'],
-          ['开发实现', '待开始', '0%'],
-          ['测试验证', '待开始', '0%']
-        ],
-        `"${userMessage}" 相关项目进度表`
-      )
-
-    case RESPONSE_TYPES.CHART:
-      return generateChartResponse(
-        `flowchart TD\n    A[开始] --> B{判断条件}\n    B -->|是| C[执行方案 A]\n    B -->|否| D[执行方案 B]\n    C --> E[完成]\n    D --> E\n\n    style A fill:#6366f1\n    style E fill:#10b981`,
-        `"${userMessage}" 处理流程图`
-      )
-
-    case RESPONSE_TYPES.FORMULA:
-      return generateFormulaResponse(
-        [
-          '\\text{效率} = \\frac{\\text{输出}}{\\text{输入}} \\times 100\\%',
-          '\\text{优化率} = \\frac{\\text{新值} - \\text{旧值}}{\\text{旧值}} \\times 100\\%'
-        ],
-        `根据数据分析，针对"${userMessage}"的效率提升了约 23%。`
-      )
-
-    case RESPONSE_TYPES.IMAGE:
-      const randomId = Math.floor(Math.random() * 1000)
-      return generateImageResponse(
-        `https://picsum.photos/seed/design${randomId}/800/600`,
-        `${agent.name} 生成的图片`
-      )
-
-    case RESPONSE_TYPES.DOCUMENT:
-      return generateDocumentResponse([
-        {
-          title: '概述',
-          content: `关于"${userMessage}"的分析报告已生成。以下是核心内容摘要。`
-        },
-        {
-          title: '关键发现',
-          content: '通过深入分析，我们发现三个关键点需要关注：1）数据质量显著提升；2）流程效率明显改善；3）用户反馈整体积极。'
-        },
-        {
-          title: '建议行动',
-          content: '建议下一步重点关注用户反馈收集，并将最佳实践推广到其他业务线。'
-        }
-      ])
-
-    default:
-      return generateTextResponse(
-        `收到您的消息："${userMessage}"。\n\n我已理解您的需求，正在为您分析相关内容。请稍等片刻，我会给出详细的处理方案。`
-      )
-  }
+  return selectedTemplate
 }
 
 export function useChat() {
@@ -287,6 +343,33 @@ export function useChat() {
     }
   }
 
+  // 计算文本的打字时间估算
+  const estimateTypingTime = (response) => {
+    // 打字机效果速度约为 20-50ms/字符，平均 35ms
+    const avgTypingSpeed = 35
+
+    let totalTextLength = 0
+
+    // 计算各种响应类型的文本长度
+    if (response.responseType === RESPONSE_TYPES.COMPOSITE) {
+      // 组合响应：遍历所有 items
+      if (response.data?.items) {
+        for (const item of response.data.items) {
+          if (item.type === RESPONSE_TYPES.TEXT && item.data?.content) {
+            totalTextLength += item.data.content.length
+          }
+        }
+      }
+    } else if (response.responseType === RESPONSE_TYPES.TEXT && response.data?.content) {
+      totalTextLength = response.data.content.length
+    } else if (response.responseType === RESPONSE_TYPES.CODE && response.data?.code) {
+      totalTextLength = response.data.code.length
+    }
+
+    // 返回估算的打字时间（毫秒），至少 500ms
+    return Math.max(500, totalTextLength * avgTypingSpeed)
+  }
+
   // 模拟 Agent 响应
   const simulateAgentResponse = async (agent, userMessage) => {
     // 模拟每个 Agent 的思考时间
@@ -311,7 +394,7 @@ export function useChat() {
       agentIcon: agent.icon,
       content: `${agent.name} 的响应`,
       ...response,
-      isNew: true, // 标记为新消息，启用打字机效果
+      isNew: true,
       timestamp: formatTime()
     }
   }
@@ -365,7 +448,10 @@ export function useChat() {
 
     // 按顺序让每个 Agent 处理并回复
     const agentMessages = []
-    for (const agent of agents) {
+    const totalAgents = agents.length
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i]
+
       // 设置当前活跃 Agent
       activeAgent.value = agent.id
 
@@ -398,6 +484,12 @@ export function useChat() {
         messages.value.push(agentMessage)
       }
       agentMessages.push(agentMessage)
+
+      // 多 Agent 场景下：等待打字效果完成后再进行下一个
+      // 给每个 Agent 1.8 秒的打字时间，避免明显停顿
+      if (totalAgents > 1 && i < agents.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1800))
+      }
     }
 
     // 添加协同完成日志

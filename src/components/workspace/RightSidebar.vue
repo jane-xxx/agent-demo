@@ -12,10 +12,7 @@
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
-          <div class="member-info">
-            <div class="member-name">我</div>
-            <div class="member-status online">在线</div>
-          </div>
+          <div class="member-name">我</div>
         </div>
         <!-- Agents -->
         <template v-if="teamAgents.length > 0">
@@ -24,18 +21,12 @@
             :key="agent.id"
             class="member-card"
             :class="{ 'agent-active': activeAgent === agent.id }"
-            :style="{ '--agent-color': agent.color }"
             @click="handleAgentClick(agent)"
           >
-            <div class="member-avatar" :style="{ background: agent.color }">
+            <div class="member-avatar" :style="{ background: agent.color, color: agent.color }">
               <component :is="getAgentIcon(agent.icon)" />
             </div>
-            <div class="member-info">
-              <div class="member-name">{{ agent.name }}</div>
-              <div class="member-status" :class="agent.status || 'online'">
-                {{ (agent.status || 'online') === 'online' ? '在线' : '离线' }}
-              </div>
-            </div>
+            <div class="member-name">{{ agent.name.replace(' Agent', '') }}</div>
           </div>
         </template>
       </div>
@@ -300,60 +291,67 @@ const handleClearLogs = () => {
   font-size: 11px;
 }
 
-/* 成员卡片 */
+/* 成员列表 */
+.member-list {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-content: start;
+  align-items: start;
+  row-gap: 8px;
+  column-gap: 6px;
+  padding: 6px 10px 12px;
+}
+
 .member-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 8px;
+  gap: 3px;
+  padding: 4px 4px;
   background: transparent;
   border: none;
   border-radius: 8px;
   transition: all 0.2s ease;
   cursor: pointer;
-  margin-bottom: 2px;
-  position: relative;
 }
 
-.member-card:hover {
-  background: rgba(99, 102, 241, 0.08);
+.member-card:hover .member-avatar {
+  filter: brightness(1.3) saturate(1.2);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
 }
 
-/* Agent 活跃状态动效 - 右侧小标记 */
-.member-card.agent-active::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 10px;
-  background: var(--agent-color, #22c55e);
-  border-radius: 50%;
-  animation: badge-pulse 1.5s ease-in-out infinite;
+/* Agent执行中的发光效果 */
+.member-card.agent-active .member-avatar {
+  animation: runningGlow 1.4s ease-in-out infinite;
 }
 
-@keyframes badge-pulse {
-  0%, 100% {
-    transform: translateY(-50%) scale(1);
-    opacity: 1;
+@keyframes runningGlow {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
   }
   50% {
-    transform: translateY(-50%) scale(1.3);
-    opacity: 0.7;
+    box-shadow: 0 0 8px 4px currentColor,
+                0 0 16px 8px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 currentColor;
   }
 }
 
 .member-avatar {
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+  z-index: 1;
 }
 
 .member-avatar::before {
@@ -365,8 +363,8 @@ const handleClearLogs = () => {
 }
 
 .member-avatar svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   stroke: white;
   position: relative;
   z-index: 1;
@@ -376,40 +374,14 @@ const handleClearLogs = () => {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
 }
 
-.member-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
 .member-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: #f1f5f9;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.member-status {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 5px;
-  border-radius: 3px;
-  margin-top: 4px;
-  display: inline-block;
-  align-self: flex-start;
-}
-
-.member-status.online {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-}
-
-.member-status.offline {
-  background: rgba(100, 116, 139, 0.15);
-  color: #64748b;
+  width: 100%;
 }
 </style>

@@ -6,7 +6,8 @@ export const RESPONSE_TYPES = {
   CHART: 'chart',
   FORMULA: 'formula',
   IMAGE: 'image',
-  DOCUMENT: 'document'
+  DOCUMENT: 'document',
+  COMPOSITE: 'composite' // 新增：组合类型
 }
 
 // Agent 能力映射

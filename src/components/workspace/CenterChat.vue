@@ -34,7 +34,16 @@
         </div>
       </div>
 
-      <div class="chat-content" ref="chatContent">
+      <!-- Loading indicator - outside chat-content -->
+      <div v-if="isInitialLoading && messages.length > 0" class="loading-container">
+        <svg class="loading-spinner" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.3"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="2"></path>
+        </svg>
+        <span>加载消息中...</span>
+      </div>
+
+      <div class="chat-content" ref="chatContent" :class="{ 'content-loading': isInitialLoading }">
         <!-- Welcome message when no messages -->
         <div v-if="messages.length === 0" class="welcome-state">
           <div class="welcome-icon">
@@ -84,8 +93,8 @@
                 <template v-if="message.type === 'agent' && message.agentName">
                   {{ message.agentName }}
                 </template>
-                <template v-else>
-                  {{ message.timestamp }}
+                <template v-else-if="message.type === 'user'">
+                  我
                 </template>
               </div>
               <div class="message-text" :class="{ 'processing': message.isProcessing, 'message-text-with-image': message.responseType === 'image' }">
@@ -94,10 +103,12 @@
                   :key="message.id"
                   :response-type="message.responseType"
                   :data="message.data"
-                  :enable-typewriter="message.isNew || false"
+                  :enable-typewriter="!!message.isNew"
+                  :message-id="message.id"
+                  @typing-complete="handleTypingComplete(message.id)"
                 />
                 <span v-else-if="message.isProcessing">{{ message.content }}</span>
-                <span v-else>{{ message.content }}</span>
+                <span v-else-if="message.content">{{ message.content }}</span>
               </div>
             </div>
           </div>
@@ -214,7 +225,8 @@ const currentTeam = computed(() => {
         teamId: found.id,
         name: found.name,
         agents: found.agents || [],
-        description: found.description
+        description: found.description,
+        createdAt: found.createdAt || found.lastActivity
       }
     }
   }
@@ -235,6 +247,8 @@ const isNearBottom = ref(true) // 用户是否在底部附近
 const showScrollButton = ref(false) // 是否显示滚动按钮
 const scrollButtonBadge = ref('') // 按钮上的徽章文字
 const userScrolled = ref(false) // 用户是否手动滚动过
+const originalPaddingBottom = ref(0) // 保存原始的 padding-bottom 值
+const isInitialLoading = ref(false) // 首次加载消息时的加载状态
 
 // Mention picker state
 const mentionPickerOpen = ref(false)
@@ -279,16 +293,19 @@ const handleSend = async () => {
       )
     }
 
-    // 调用 sendMessage（不等待 Agent 响应完成）
     const sendPromise = sendMessage(inputText.value, respondingAgents)
+
     inputText.value = ''
 
-    // 立即滚动，不等 Agent 响应
+    // 立即滚动
     nextTick(() => {
       scrollAfterUserMessage()
     })
 
     await sendPromise
+
+    // 回复完成后重置 padding
+    resetPadding()
   } catch (error) {
     console.error('发送消息失败:', error)
   }
@@ -410,56 +427,85 @@ const scrollToElement = (element, offset = 20) => {
   })
 }
 
-// 滚动到底部 - 使用最可靠的方法：直接设置 scrollTop
-const scrollToBottom = (smooth = true) => {
-  if (!chatContent.value) {
-    console.log('[ScrollToBottom] chatContent 不存在')
-    return
-  }
+// 首屏滚动到最底部 - 无滚动痕迹
+const scrollToBottomOnFirstLoad = () => {
+  if (!chatContent.value) return
 
-  console.log('[ScrollToBottom] 开始滚动，消息数量:', messages.value.length)
+  const container = chatContent.value
 
-  // 使用 requestAnimationFrame 确保浏览器已经完成布局绘制
-  const attemptScroll = (attempt = 0) => {
-    const maxAttempts = 5
+  // 显示 loading 状态，隐藏内容
+  isInitialLoading.value = true
 
-    nextTick(() => {
+  // 等待 DOM 完全渲染并稳定
+  let lastScrollHeight = 0
+  let stableCount = 0
+  const maxAttempts = 50
+
+  const waitForRenderComplete = (attempt = 0) => {
+    if (!container) return
+
+    const currentScrollHeight = container.scrollHeight
+
+    // scrollHeight 稳定说明渲染完成
+    if (currentScrollHeight === lastScrollHeight) {
+      stableCount++
+    } else {
+      stableCount = 0
+      lastScrollHeight = currentScrollHeight
+    }
+
+    // 连续 3 次检查 scrollHeight 没变化，说明渲染完成
+    if (stableCount >= 3 || attempt >= maxAttempts) {
+      // 多次修正滚动位置
+      const setScrollPosition = () => {
+        const scrollHeight = container.scrollHeight
+        const clientHeight = container.clientHeight
+        container.scrollTop = scrollHeight - clientHeight
+      }
+
+      setScrollPosition()
+
+      // 多次设置确保准确
       requestAnimationFrame(() => {
+        setScrollPosition()
         requestAnimationFrame(() => {
-          // 双重 requestAnimationFrame 确保浏览器完成布局和绘制
-          if (!chatContent.value) return
-
-          console.log('[ScrollToBottom] 尝试滚动，第', attempt + 1, '次')
-
-          const { scrollHeight, clientHeight } = chatContent.value
-          console.log('[ScrollToBottom] scrollHeight:', scrollHeight, 'clientHeight:', clientHeight)
-
-          // 直接滚动到绝对底部 - 这是唯一能确保滚动到底部的方法
-          chatContent.value.scrollTop = scrollHeight
-
-          isNearBottom.value = true
-          showScrollButton.value = false
-
-          // 验证滚动结果
-          setTimeout(() => {
-            if (chatContent.value) {
-              const { scrollTop, scrollHeight, clientHeight } = chatContent.value
-              const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-              console.log('[ScrollToBottom] 滚动后 - scrollTop:', scrollTop, '距底部:', distanceFromBottom, 'px')
-
-              // 如果还是没有到底部（可能内容还在渲染），重试
-              if (distanceFromBottom > 50 && attempt < maxAttempts) {
-                console.log('[ScrollToBottom] 未完全到底部，50ms 后重试')
-                setTimeout(() => attemptScroll(attempt + 1), 50)
-              }
+          setScrollPosition()
+          // 隐藏 loading，显示内容
+          requestAnimationFrame(() => {
+            if (container) {
+              isInitialLoading.value = false
+              isNearBottom.value = true
+              showScrollButton.value = false
             }
-          }, 100)
+          })
         })
       })
-    })
+      return
+    }
+
+    setTimeout(() => waitForRenderComplete(attempt + 1), 20)
   }
 
-  attemptScroll()
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        waitForRenderComplete()
+      })
+    })
+  })
+}
+
+// 滚动到底部 - 用于用户点击按钮时的平滑滚动
+const scrollToBottom = () => {
+  if (!chatContent.value) return
+
+  chatContent.value.scrollTo({
+    top: chatContent.value.scrollHeight,
+    behavior: 'smooth'
+  })
+
+  isNearBottom.value = true
+  showScrollButton.value = false
 }
 
 // 用户发送消息后滚动
@@ -468,44 +514,56 @@ const scrollAfterUserMessage = () => {
     const container = chatContent.value
     if (!container) return
 
-    // 找到最后一条消息（用户消息）
-    const messageElements = container.querySelectorAll('.message')
-    if (messageElements.length > 0) {
-      const lastMessage = messageElements[messageElements.length - 1]
-      const messageOffsetTop = lastMessage.offsetTop
-      const currentScrollTop = container.scrollTop
+    // 在底部增加 padding 来扩大滚动范围
+    const extraPadding = container.clientHeight * 0.5
+
+    // 设置新的 padding-bottom
+    const newPadding = originalPaddingBottom.value + extraPadding
+    container.style.paddingBottom = newPadding + 'px'
+
+    // 等待 DOM 更新后计算新的滚动高度
+    nextTick(() => {
       const scrollHeight = container.scrollHeight
       const clientHeight = container.clientHeight
-
-      // 直接滚动，让新消息出现在可视区域顶部（留 80px 空间）
-      const targetScrollTop = Math.max(0, messageOffsetTop - 80)
       const maxScrollTop = scrollHeight - clientHeight
 
-      console.log('[User Message Scroll] - 当前 scrollTop:', currentScrollTop)
-      console.log('[User Message Scroll] - 目标 scrollTop:', targetScrollTop)
-      console.log('[User Message Scroll] - scrollHeight:', scrollHeight, 'clientHeight:', clientHeight, 'maxScrollTop:', maxScrollTop)
-
-      // 限制目标不超过最大可滚动位置
-      const finalTarget = Math.min(targetScrollTop, maxScrollTop)
-
-      console.log('[User Message Scroll] - 最终目标:', finalTarget)
-
-      // 使用 auto 行为（即时滚动）
+      // 滚动到新增加的底部空间，让新消息出现在可视区域上方
       container.scrollTo({
-        top: finalTarget,
+        top: maxScrollTop,
         behavior: 'auto'
       })
 
       userScrolled.value = false
-      isNearBottom.value = true
-
-      // 检查滚动是否成功
-      setTimeout(() => {
-        const actualScrollTop = container.scrollTop
-        console.log('[User Message Scroll] - 滚动后 scrollTop:', actualScrollTop)
-      }, 100)
-    }
+      isNearBottom.value = false
+      showScrollButton.value = true
+    })
   })
+}
+
+// 重置 padding 到原始值
+const resetPadding = () => {
+  nextTick(() => {
+    const container = chatContent.value
+    if (!container) return
+
+    // 恢复到原始的 padding-bottom
+    container.style.paddingBottom = originalPaddingBottom.value + 'px'
+  })
+}
+
+// Get agent icon component
+const getAgentIcon = (iconName) => {
+  const iconMap = {
+    chat: ChatBubbleLeftRightIcon,
+    search: MagnifyingGlassIcon,
+    document: DocumentTextIcon,
+    code: CodeBracketIcon,
+    chart: ChartBarIcon,
+    palette: PaintBrushIcon,
+    lightbulb: LightBulbIcon,
+    rocket: RocketLaunchIcon
+  }
+  return iconMap[iconName] || ChatBubbleLeftRightIcon
 }
 
 // 处理滚动事件
@@ -521,19 +579,11 @@ const handleScrollButtonClick = () => {
   scrollToBottom()
 }
 
-// Get agent icon component - same as RightSidebar
-const getAgentIcon = (iconName) => {
-  const iconMap = {
-    chat: ChatBubbleLeftRightIcon,
-    search: MagnifyingGlassIcon,
-    document: DocumentTextIcon,
-    code: CodeBracketIcon,
-    chart: ChartBarIcon,
-    palette: PaintBrushIcon,
-    lightbulb: LightBulbIcon,
-    rocket: RocketLaunchIcon
-  }
-  return iconMap[iconName] || ChatBubbleLeftRightIcon
+// 处理打字完成事件
+const handleTypingComplete = (messageId) => {
+  console.log('[Typing Complete] Message ID:', messageId)
+  // 可以在这里添加打字完成后的处理逻辑
+  // 目前暂时不需要额外处理，因为我们在 useChat 中已经添加了延迟
 }
 
 // 监听团队变化，加载对应的聊天数据
@@ -548,23 +598,15 @@ watch(teamId, (newTeamId, oldTeamId) => {
 
     console.log('[Team Watch] setTeam 完成，消息数量:', messages.value.length)
 
-    // 等待数据加载、响应式更新和 DOM 渲染
-    // 使用 setTimeout 确保 Vue 渲染完成后再滚动
+    // 每次切换团队都执行滚动
     nextTick(() => {
-      console.log('[Team Watch] 第一个 nextTick，消息数量:', messages.value.length)
-
-      // 额外延迟确保复杂内容（图片、公式）有时间开始渲染
-      setTimeout(() => {
-        console.log('[Team Watch] setTimeout 延迟后，消息数量:', messages.value.length)
-
-        if (messages.value.length > 0) {
-          console.log('[Team Watch] 有消息，准备滚动')
-          // 调用 scrollToBottom 使用 scrollTop 滚动到底部
-          scrollToBottom(false)
-        } else {
-          console.log('[Team Watch] 没有消息，跳过滚动')
-        }
-      }, 100)
+      console.log('[Team Watch] nextTick 后，消息数量:', messages.value.length)
+      if (messages.value.length > 0) {
+        console.log('[Team Watch] 调用 scrollToBottomOnFirstLoad')
+        scrollToBottomOnFirstLoad()
+      } else {
+        console.log('[Team Watch] 没有消息，跳过滚动')
+      }
     })
   }
 }, { immediate: true })
@@ -577,6 +619,11 @@ watch(() => messages.value, (newMessages, oldMessages = []) => {
 
 // Auto-scroll when messages change
 onMounted(() => {
+  // 保存原始的 padding-bottom 值
+  if (chatContent.value) {
+    originalPaddingBottom.value = parseInt(getComputedStyle(chatContent.value).paddingBottom) || 24
+  }
+
   // 添加滚动监听
   if (chatContent.value) {
     chatContent.value.addEventListener('scroll', handleScroll)
@@ -617,6 +664,7 @@ onMounted(() => {
   flex-direction: column;
   background: #0f141f;
   overflow: hidden;
+  position: relative;
 }
 
 /* Empty state */
@@ -690,7 +738,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 24px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(0, 0, 0, 0.15);
 }
@@ -786,11 +834,16 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 24px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 18px;
   overflow-anchor: none;
+  position: relative;
+}
+
+.chat-content.content-loading {
+  opacity: 0;
 }
 
 .chat-content::-webkit-scrollbar {
@@ -818,6 +871,47 @@ onMounted(() => {
   justify-content: center;
   text-align: center;
   padding: 48px 24px;
+}
+
+/* Loading container - outside chat-content */
+.loading-container {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #94a3b8;
+  z-index: 10;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  color: #6366f1;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  color: #6366f1;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .welcome-icon {
@@ -965,8 +1059,7 @@ onMounted(() => {
 
 /* 包含图片的消息文本容器可以更宽 */
 .message-text-with-image {
-  max-width: none !important;
-  width: auto !important;
+  /* 移除之前的样式，现在所有消息统一使用 600px 宽度 */
 }
 
 .message-text.processing::after {
@@ -985,10 +1078,18 @@ onMounted(() => {
   }
 }
 
+.agent-message .message-text {
+  max-width: 600px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 14px 18px;
+}
+
 .user-message .message-text {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
   border: none;
+  max-width: 600px;
 }
 
 .task-output-card {
@@ -1093,7 +1194,7 @@ onMounted(() => {
 }
 
 .chat-input-bar {
-  padding: 18px 24px;
+  padding: 12px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(0, 0, 0, 0.15);
 }

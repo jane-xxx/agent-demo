@@ -4,18 +4,11 @@
     <Transition name="modal">
       <div v-if="isOpen" class="confirm-overlay" @click.self="cancel">
         <div class="confirm-container">
-          <div class="confirm-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
           <h3 class="confirm-title">{{ title }}</h3>
           <p class="confirm-message">{{ message }}</p>
           <div class="confirm-actions">
             <button class="btn-cancel" @click="cancel">取消</button>
-            <button class="btn-confirm" @click="confirm">确认</button>
+            <button class="btn-confirm" @click="confirm">删除</button>
           </div>
         </div>
       </div>
@@ -54,7 +47,7 @@ const cancel = () => {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,86 +58,67 @@ const cancel = () => {
 .confirm-container {
   background: #1a2130;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  max-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 320px;
   width: 100%;
-  padding: 24px;
-  text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.confirm-icon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 16px;
-  background: rgba(234, 88, 12, 0.15);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.confirm-icon svg {
-  width: 24px;
-  height: 24px;
-  stroke: #ea580c;
+  padding: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 .confirm-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #e0e0e0;
-  margin: 0 0 12px;
+  color: #f1f5f9;
+  margin: 0 0 6px;
 }
 
 .confirm-message {
   font-size: 14px;
-  color: #a0aec0;
-  margin: 0 0 24px;
-  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 14px;
+  line-height: 1.5;
 }
 
 .confirm-actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .btn-cancel,
 .btn-confirm {
-  padding: 10px 24px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .btn-cancel {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #a0aec0;
+  border: none;
+  color: #94a3b8;
 }
 
 .btn-cancel:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #e0e0e0;
+  color: #cbd5e1;
 }
 
 .btn-confirm {
-  background: #ea580c;
+  background: #ef4444;
   border: none;
   color: white;
 }
 
 .btn-confirm:hover {
-  background: #c2410c;
+  background: #dc2626;
 }
 
 .modal-enter-active,
 .modal-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .modal-enter-from,
@@ -154,7 +128,11 @@ const cancel = () => {
 
 .modal-enter-from .confirm-container,
 .modal-leave-to .confirm-container {
-  transform: scale(0.95);
-  opacity: 0;
+  transform: scale(0.96);
+}
+
+.modal-enter-active .confirm-container,
+.modal-leave-active .confirm-container {
+  transition: transform 0.2s ease;
 }
 </style>
