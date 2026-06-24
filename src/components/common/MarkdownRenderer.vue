@@ -7,7 +7,6 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import MarkdownIt from 'markdown-it'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-import mermaid from 'mermaid'
 
 const props = defineProps({
   content: {
@@ -17,6 +16,41 @@ const props = defineProps({
 })
 
 const renderedHtml = ref('')
+
+// Mermaid 实例
+let mermaid = null
+let mermaidInitialized = false
+
+// 动态导入并初始化 Mermaid
+const initMermaid = async () => {
+  if (mermaidInitialized) return
+
+  try {
+    const { default: mermaidModule } = await import('mermaid')
+    mermaid = mermaidModule
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+      themeVariables: {
+        darkMode: true,
+        background: '#1e293b',
+        primaryColor: '#6366f1',
+        primaryTextColor: '#f1f5f9',
+        primaryBorderColor: '#818cf8',
+        lineColor: '#94a3b8',
+        secondaryColor: '#475569',
+        tertiaryColor: '#334155',
+        fontSize: '14px'
+      }
+    })
+
+    mermaidInitialized = true
+  } catch (e) {
+    console.error('Failed to load mermaid:', e)
+  }
+}
 
 // 初始化 markdown-it
 const md = new MarkdownIt({
@@ -47,24 +81,6 @@ const escapeHtml = (text) => {
 // Mermaid 图表计数器
 let mermaidCounter = 0
 
-// 初始化 Mermaid
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  securityLevel: 'loose',
-  themeVariables: {
-    darkMode: true,
-    background: '#1e293b',
-    primaryColor: '#6366f1',
-    primaryTextColor: '#f1f5f9',
-    primaryBorderColor: '#818cf8',
-    lineColor: '#94a3b8',
-    secondaryColor: '#475569',
-    tertiaryColor: '#334155',
-    fontSize: '14px'
-  }
-})
-
 // 渲染 LaTeX 公式
 const renderLatex = (text) => {
   // 匹配 $$...$$ (块级公式) 和 $...$ (行内公式)
@@ -90,6 +106,10 @@ const renderMermaid = async (html) => {
   const matches = [...html.matchAll(mermaidRegex)]
 
   if (matches.length === 0) return html
+
+  // 确保 mermaid 已加载
+  await initMermaid()
+  if (!mermaid) return html
 
   // 替换每个 mermaid 代码块为渲染后的 SVG
   for (const match of matches) {
