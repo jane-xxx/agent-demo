@@ -514,17 +514,22 @@ const scrollAfterUserMessage = () => {
     const container = chatContent.value
     if (!container) return
 
-    // 获取用户消息元素（最后一条消息）
-    const messages = container.querySelectorAll('.message-item')
-    const lastMessage = messages[messages.length - 1]
+    // 获取所有消息元素（使用正确的 class 选择器）
+    const messageElements = container.querySelectorAll('.chat-content > .message')
+    const lastMessage = messageElements[messageElements.length - 1]
 
-    if (!lastMessage) return
+    if (!lastMessage) {
+      console.warn('[scrollAfterUserMessage] No message element found')
+      return
+    }
 
     // 计算目标滚动位置：让用户消息出现在视口上方 20% 的位置
     const messageTop = lastMessage.offsetTop
     const targetScrollTop = messageTop - (container.clientHeight * 0.2)
 
-    // 直接滚动到目标位置，不使用 padding
+    console.log('[scrollAfterUserMessage] Scrolling to:', targetScrollTop, 'Message top:', messageTop)
+
+    // 直接滚动到目标位置
     container.scrollTo({
       top: Math.max(0, targetScrollTop),
       behavior: 'auto'
