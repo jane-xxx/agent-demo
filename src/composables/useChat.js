@@ -8,6 +8,8 @@ import { KEYWORD_RESPONSES, DEFAULT_RESPONSES } from '../utils/keywordResponses.
 // LocalStorage keys
 const MESSAGES_STORAGE_KEY = 'multiagent_messages'
 const LOGS_STORAGE_KEY = 'multiagent_logs'
+const DATA_VERSION_KEY = 'multiagent_data_version'
+const CURRENT_DATA_VERSION = '2025-06-25-v2' // 数据版本号
 
 // 全局消息状态（所有组件共享）
 const messages = ref([])
@@ -23,6 +25,17 @@ const teamLogs = new Map()
 // 从 localStorage 加载团队数据
 const loadFromStorage = () => {
   try {
+    const storedVersion = localStorage.getItem(DATA_VERSION_KEY)
+
+    // 如果版本不匹配，清除旧数据
+    if (storedVersion !== CURRENT_DATA_VERSION) {
+      console.log('数据版本更新，清除缓存')
+      localStorage.removeItem(MESSAGES_STORAGE_KEY)
+      localStorage.removeItem(LOGS_STORAGE_KEY)
+      localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION)
+      return
+    }
+
     const storedMessages = localStorage.getItem(MESSAGES_STORAGE_KEY)
     const storedLogs = localStorage.getItem(LOGS_STORAGE_KEY)
 
