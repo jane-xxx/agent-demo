@@ -303,6 +303,64 @@ const loginForm = useForm<LoginForm>({
         explanation: '登录表单配置示例，包含邮箱格式验证和密码长度验证。'
       },
       timestamp: '14:34'
+    },
+    {
+      id: 'msg-004',
+      type: 'user',
+      content: '我的组件有个内存泄漏，每次卸载时控制台都报警告',
+      timestamp: '15:10'
+    },
+    {
+      id: 'msg-005',
+      type: 'agent',
+      agentId: 4,
+      agentName: 'Code Agent',
+      agentColor: '#00b894',
+      agentIcon: 'code',
+      responseType: RESPONSE_TYPES.TEXT,
+      data: {
+        content: `**内存泄漏排查思路**
+
+组件卸载时的警告通常是因为：
+
+1. **未清理的副作用**：useEffect 没有返回清理函数
+2. **定时器未清除**：setInterval/setTimeout 未 clearTimeout
+3. **事件监听器未移除**：addEventListener 后未 removeEventListener
+
+请分享一下你的 useEffect 代码，我帮你定位问题。`
+      },
+      timestamp: '15:12'
+    },
+    {
+      id: 'msg-006',
+      type: 'user',
+      content: '按你说的加了依赖数组，但清理函数还是没执行',
+      timestamp: '15:15'
+    },
+    {
+      id: 'msg-007',
+      type: 'agent',
+      agentId: 4,
+      agentName: 'Code Agent',
+      agentColor: '#00b894',
+      agentIcon: 'code',
+      responseType: RESPONSE_TYPES.CODE,
+      data: {
+        language: 'typescript',
+        code: `useEffect(() => {
+  const timer = setInterval(() => {
+    console.log('Polling...')
+  }, 1000)
+
+  // ⚠️ 必须返回清理函数
+  return () => {
+    clearInterval(timer)
+    console.log('Cleanup executed')
+  }
+}, []) // 空依赖数组表示只在挂载时执行`,
+        explanation: '关键是返回一个清理函数，组件卸载时会自动执行。如果你加了依赖数组但没用上，用空数组 `[]` 即可。'
+      },
+      timestamp: '15:18'
     }
   ],
   'team-002': [
@@ -496,6 +554,10 @@ const loginForm = useForm<LoginForm>({
 // ============================================
 export const MOCK_LOGS = {
   'team-001': [
+    { time: '15:18:45', content: 'Code Agent: 提供内存泄漏修复方案' },
+    { time: '15:15:30', content: '用户: 反馈清理函数未执行' },
+    { time: '15:12:15', content: 'Code Agent: 分析内存泄漏原因' },
+    { time: '15:10:00', content: '用户: 提出内存泄漏问题' },
     { time: '14:36:15', content: 'Code Agent: 代码生成完成' },
     { time: '14:35:00', content: '用户: 请求实现 React Hook' },
     { time: '14:32:00', content: 'Code Agent: 生成表单管理 Hook' },
