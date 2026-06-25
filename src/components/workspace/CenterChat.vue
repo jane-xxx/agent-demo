@@ -531,11 +531,11 @@ const scrollAfterUserMessage = () => {
       // block: 'end' 将元素定位到视口底部
       lastMessage.scrollIntoView({
         behavior: 'auto',
-        block: 'center',
+        block: 'start',
         inline: 'nearest'
       })
 
-      console.log('[scrollAfterUserMessage] Used scrollIntoView with block: center')
+      console.log('[scrollAfterUserMessage] Used scrollIntoView with block: start')
 
       userScrolled.value = false
       isNearBottom.value = true
