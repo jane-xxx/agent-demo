@@ -172,7 +172,7 @@ export const MOCK_MESSAGES = {
     {
       id: 'msg-001',
       type: 'user',
-      content: '帮我实现一个 React Hook 来管理表单状态，包含验证功能',
+      content: '@Code Agent 帮我实现一个 React Hook 来管理表单状态，包含验证功能',
       timestamp: '14:30'
     },
     {
@@ -307,7 +307,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-004',
       type: 'user',
-      content: '我的组件有个内存泄漏，每次卸载时控制台都报警告',
+      content: '@Code Agent 我的组件有个内存泄漏，每次卸载时控制台都报警告',
       timestamp: '15:10'
     },
     {
@@ -334,7 +334,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-006',
       type: 'user',
-      content: '按你说的加了依赖数组，但清理函数还是没执行',
+      content: '@Code Agent 按你说的加了依赖数组，但清理函数还是没执行',
       timestamp: '15:15'
     },
     {
@@ -367,7 +367,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-101',
       type: 'user',
-      content: '调研一下 AI 写作工具的市场现状',
+      content: '@Research Agent 调研一下 AI 写作工具的市场现状',
       timestamp: '10:15'
     },
     {
@@ -420,7 +420,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-104',
       type: 'user',
-      content: '哪些工具对中文支持比较好？',
+      content: '@Research Agent 哪些工具对中文支持比较好？',
       timestamp: '10:25'
     },
     {
@@ -446,7 +446,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-106',
       type: 'user',
-      content: '我们的差异化机会在哪里？',
+      content: '@Research Agent 我们的差异化机会在哪里？',
       timestamp: '10:32'
     },
     {
@@ -476,7 +476,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-201',
       type: 'user',
-      content: '帮我写一封产品发布的营销邮件',
+      content: '@Writing Agent 帮我写一封产品发布的营销邮件',
       timestamp: '09:00'
     },
     {
@@ -512,7 +512,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-203',
       type: 'user',
-      content: '能不能帮我改得更有吸引力一点？',
+      content: '@Writing Agent 能不能帮我改得更有吸引力一点？',
       timestamp: '09:12'
     },
     {
@@ -540,7 +540,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-205',
       type: 'user',
-      content: '再加个用户引用会更好',
+      content: '@Writing Agent 再加个用户引用会更好',
       timestamp: '09:20'
     },
     {
@@ -564,7 +564,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-207',
       type: 'user',
-      content: '这个版本不错！能再调整一下，把限时优惠改成更有紧迫感的说法？',
+      content: '@Writing Agent 这个版本不错！能再调整一下，把限时优惠改成更有紧迫感的说法？',
       timestamp: '09:28'
     },
     {
@@ -596,7 +596,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-301',
       type: 'user',
-      content: '为新功能设计一套 UI 界面，要简洁现代的风格',
+      content: '@Design Agent 为新功能设计一套 UI 界面，要简洁现代的风格',
       timestamp: '16:20'
     },
     {
@@ -639,7 +639,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-304',
       type: 'user',
-      content: '这个配色能调整得更现代一点吗？',
+      content: '@Design Agent 这个配色能调整得更现代一点吗？',
       timestamp: '16:40'
     },
     {
@@ -677,7 +677,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-306',
       type: 'user',
-      content: '能展示一下效果吗？',
+      content: '@Design Agent 能展示一下效果吗？',
       timestamp: '16:46'
     },
     {
@@ -699,7 +699,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-401',
       type: 'user',
-      content: '分析一下销售数据，找出最畅销的产品',
+      content: '@Data Analyst Agent 分析一下销售数据，找出最畅销的产品',
       timestamp: '11:00'
     },
     {
@@ -743,7 +743,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-404',
       type: 'user',
-      content: '能帮我预测一下下季度的趋势吗？',
+      content: '@Data Analyst Agent 能帮我预测一下下季度的趋势吗？',
       timestamp: '11:30'
     },
     {
@@ -797,7 +797,7 @@ const loginForm = useForm<LoginForm>({
     {
       id: 'msg-406',
       type: 'user',
-      content: '哪个情景最可能发生？',
+      content: '@Data Analyst Agent 哪个情景最可能发生？',
       timestamp: '11:40'
     },
     {
