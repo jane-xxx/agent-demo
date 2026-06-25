@@ -523,11 +523,11 @@ const scrollAfterUserMessage = () => {
       return
     }
 
-    // 计算目标滚动位置：让用户消息出现在视口上方 20% 的位置
+    // 计算目标滚动位置：让用户消息出现在视口上方 50% 的位置
     const messageTop = lastMessage.offsetTop
-    const targetScrollTop = messageTop - (container.clientHeight * 0.2)
+    const targetScrollTop = messageTop - (container.clientHeight * 0.5)
 
-    console.log('[scrollAfterUserMessage] Scrolling to:', targetScrollTop, 'Message top:', messageTop)
+    console.log('[scrollAfterUserMessage] Scrolling to:', targetScrollTop, 'Message top:', messageTop, '(50% viewport)')
 
     // 直接滚动到目标位置
     container.scrollTo({
