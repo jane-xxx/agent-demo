@@ -605,6 +605,64 @@ const loginForm = useForm<LoginForm>({
         caption: '用户界面交互流程图'
       },
       timestamp: '16:32'
+    },
+    {
+      id: 'msg-304',
+      type: 'user',
+      content: '这个配色能调整得更现代一点吗？',
+      timestamp: '16:40'
+    },
+    {
+      id: 'msg-305',
+      type: 'agent',
+      agentId: 6,
+      agentName: 'Design Agent',
+      agentColor: '#d63031',
+      agentIcon: 'palette',
+      responseType: RESPONSE_TYPES.COMPOSITE,
+      data: {
+        items: [
+          {
+            type: RESPONSE_TYPES.TEXT,
+            data: {
+              content: '**现代配色建议**\n\n当前配色偏传统，我建议采用更现代的渐变配色方案：'
+            }
+          },
+          {
+            type: RESPONSE_TYPES.TABLE,
+            data: {
+              headers: ['用途', '当前配色', '建议配色', '效果'],
+              rows: [
+                ['主色', '#d63031', 'linear-gradient(135deg, #667eea, #764ba2)', '渐变紫'],
+                ['强调', '#fd79a8', 'linear-gradient(135deg, #f093fb, #f5576c)', '粉紫渐变'],
+                ['背景', '#ffffff', '#f8fafc with glassmorphism', '毛玻璃效果']
+              ],
+              caption: '配色方案对比'
+            }
+          }
+        ]
+      },
+      timestamp: '16:43'
+    },
+    {
+      id: 'msg-306',
+      type: 'user',
+      content: '能展示一下效果吗？',
+      timestamp: '16:46'
+    },
+    {
+      id: 'msg-307',
+      type: 'agent',
+      agentId: 6,
+      agentName: 'Design Agent',
+      agentColor: '#d63031',
+      agentIcon: 'palette',
+      responseType: RESPONSE_TYPES.IMAGE,
+      data: {
+        url: 'https://picsum.photos/seed/modern-ui/800/600',
+        alt: '现代风格 UI 设计稿'
+      },
+      timestamp: '16:50'
     }
   ],
   'team-005': [
@@ -692,6 +750,10 @@ export const MOCK_LOGS = {
     { time: '09:00:00', content: '用户: 创建文案撰写任务' }
   ],
   'team-004': [
+    { time: '16:50:30', content: 'Design Agent: 生成现代风格设计稿' },
+    { time: '16:46:15', content: '用户: 请求查看效果' },
+    { time: '16:43:20', content: 'Design Agent: 建议现代配色方案' },
+    { time: '16:40:00', content: '用户: 要求调整配色' },
     { time: '16:32:30', content: 'Design Agent: 完成界面设计' },
     { time: '16:25:15', content: 'Design Agent: 生成设计稿' },
     { time: '16:22:00', content: 'Design Agent: 开始设计工作' },
