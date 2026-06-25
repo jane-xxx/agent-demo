@@ -514,18 +514,6 @@ const scrollAfterUserMessage = () => {
     const container = chatContent.value
     if (!container) return
 
-    // 获取当前滚动状态（调试用）
-    const beforeScrollTop = container.scrollTop
-    const beforeScrollHeight = container.scrollHeight
-    const beforeClientHeight = container.clientHeight
-
-    console.log('[scrollAfterUserMessage] BEFORE:', {
-      scrollTop: beforeScrollTop,
-      scrollHeight: beforeScrollHeight,
-      clientHeight: beforeClientHeight,
-      maxScrollTop: beforeScrollHeight - beforeClientHeight
-    })
-
     // 需要等待消息实际渲染到 DOM
     setTimeout(() => {
       // 获取所有消息元素
@@ -537,43 +525,68 @@ const scrollAfterUserMessage = () => {
         return
       }
 
-      // 获取消息位置
+      // 获取消息位置和容器尺寸
       const messageTop = lastMessage.offsetTop
       const messageHeight = lastMessage.offsetHeight
+      const scrollHeight = container.scrollHeight
+      const clientHeight = container.clientHeight
+      const maxScrollTop = scrollHeight - clientHeight
 
-      console.log('[scrollAfterUserMessage] Message:', {
+      console.log('[scrollAfterUserMessage] State:', {
         messageTop,
         messageHeight,
-        containerClientHeight: container.clientHeight
+        scrollHeight,
+        clientHeight,
+        maxScrollTop
       })
 
       // 计算目标滚动位置：让用户消息出现在视口上方 50% 的位置
-      const targetScrollTop = messageTop - (container.clientHeight * 0.5)
+      const desiredScrollTop = messageTop - (clientHeight * 0.5)
 
-      console.log('[scrollAfterUserMessage] Calculated scroll position:', {
-        targetScrollTop: Math.max(0, targetScrollTop),
-        formula: `${messageTop} - (${container.clientHeight} * 0.5)`
-      })
+      // 检查是否需要添加 padding 来实现期望的滚动位置
+      if (desiredScrollTop > maxScrollTop) {
+        // 需要添加 padding 扩大滚动范围
+        const neededPadding = desiredScrollTop - maxScrollTop
+        const currentPadding = parseInt(getComputedStyle(container).paddingBottom) || 0
 
-      // 直接滚动到目标位置
-      container.scrollTo({
-        top: Math.max(0, targetScrollTop),
-        behavior: 'auto'
-      })
+        // 临时添加 padding
+        container.style.paddingBottom = (currentPadding + neededPadding + 50) + 'px'
 
-      // 验证滚动结果
-      setTimeout(() => {
-        const afterScrollTop = container.scrollTop
-        console.log('[scrollAfterUserMessage] AFTER:', {
-          scrollTop: afterScrollTop,
-          difference: afterScrollTop - beforeScrollTop
+        // 等待 padding 应用后滚动
+        setTimeout(() => {
+          const newScrollHeight = container.scrollHeight
+          const newMaxScrollTop = newScrollHeight - clientHeight
+
+          container.scrollTo({
+            top: newMaxScrollTop,
+            behavior: 'auto'
+          })
+
+          console.log('[scrollAfterUserMessage] With padding:', {
+            addedPadding: neededPadding + 50,
+            newMaxScrollTop,
+            scrollTo: newMaxScrollTop
+          })
+
+          // 延迟移除 padding
+          setTimeout(() => {
+            container.style.paddingBottom = currentPadding + 'px'
+          }, 200)
+        }, 50)
+      } else {
+        // 不需要 padding，直接滚动
+        container.scrollTo({
+          top: Math.max(0, desiredScrollTop),
+          behavior: 'auto'
         })
-      }, 50)
+
+        console.log('[scrollAfterUserMessage] Direct scroll to:', Math.max(0, desiredScrollTop))
+      }
 
       userScrolled.value = false
       isNearBottom.value = false
       showScrollButton.value = true
-    }, 50) // 等待 DOM 渲染
+    }, 50)
   })
 }
 
