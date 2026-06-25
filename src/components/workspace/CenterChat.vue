@@ -303,9 +303,6 @@ const handleSend = async () => {
     })
 
     await sendPromise
-
-    // 回复完成后重置 padding
-    resetPadding()
   } catch (error) {
     console.error('发送消息失败:', error)
   }
@@ -516,26 +513,12 @@ const scrollAfterUserMessage = () => {
 
     // 等待消息实际渲染到 DOM
     requestAnimationFrame(() => {
-      // 获取最后一条消息元素
-      const messageElements = container.querySelectorAll('.chat-content > .message')
-      const lastMessage = messageElements[messageElements.length - 1]
-
-      if (!lastMessage) {
-        console.warn('[scrollAfterUserMessage] No message element found')
-        return
-      }
-
-      // 使用 scrollIntoView 定位消息
-      // block: 'center' 将元素定位到视口中心
-      // block: 'start' 将元素定位到视口顶部
-      // block: 'end' 将元素定位到视口底部
-      lastMessage.scrollIntoView({
-        behavior: 'auto',
-        block: 'center',
-        inline: 'nearest'
+      // 滚动到底部，让用户消息可见
+      const maxScrollTop = container.scrollHeight - container.clientHeight
+      container.scrollTo({
+        top: maxScrollTop,
+        behavior: 'auto'
       })
-
-      console.log('[scrollAfterUserMessage] Used scrollIntoView with block: center')
 
       userScrolled.value = false
       isNearBottom.value = true
@@ -544,10 +527,7 @@ const scrollAfterUserMessage = () => {
   })
 }
 
-// 重置 padding 到原始值（保留以防万一）
-const resetPadding = () => {
-  // 新逻辑不再使用 padding，此函数保留为空函数以保持兼容性
-}
+// resetPadding 已移除，不再需要
 
 // Get agent icon component
 const getAgentIcon = (iconName) => {
