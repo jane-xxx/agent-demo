@@ -5,6 +5,44 @@ import { MOCK_MESSAGES, MOCK_LOGS } from '../utils/mockData'
 import { RESPONSE_TYPES, getAgentResponseTypes } from '../utils/responseTypes'
 import { KEYWORD_RESPONSES, DEFAULT_RESPONSES } from '../utils/keywordResponses.js'
 
+// 计算打字时间（基于内容长度）
+// 打字速度：20-50ms/字符，平均35ms
+const estimateTypingTime = (response) => {
+  // 获取文本内容
+  let textLength = 0
+
+  if (response.responseType === RESPONSE_TYPES.TEXT || response.responseType === RESPONSE_TYPES.DOCUMENT) {
+    // TEXT 或 DOCUMENT 类型：计算 data.content 或 sections 内容
+    if (response.data?.content) {
+      textLength = response.data.content.length
+    } else if (response.data?.sections) {
+      textLength = response.data.sections.reduce((sum, section) => {
+        return sum + (section.title?.length || 0) + (section.content?.length || 0)
+      }, 0)
+    }
+  } else if (response.responseType === RESPONSE_TYPES.CODE) {
+    // CODE 类型：计算 code + explanation
+    textLength = (response.data?.code?.length || 0) + (response.data?.explanation?.length || 0)
+  } else if (response.responseType === RESPONSE_TYPES.COMPOSITE) {
+    // COMPOSITE 类型：计算第一个 item（通常是最长的文本）
+    if (response.data?.items?.[0]?.data?.content) {
+      textLength = response.data.items[0].data.content.length
+    } else if (response.data?.items?.[0]?.data?.code) {
+      textLength = response.data.items[0].data.code.length
+    }
+  }
+
+  // 计算打字时间：35ms/字符 + 500ms 基础延迟
+  // 但不超过 8 秒（避免过长等待）
+  const baseDelay = 500
+  const typingSpeed = 35
+  const maxDelay = 8000
+
+  const estimatedTime = Math.min(baseDelay + textLength * typingSpeed, maxDelay)
+
+  return estimatedTime
+}
+
 // LocalStorage keys
 const MESSAGES_STORAGE_KEY = 'multiagent_messages'
 const LOGS_STORAGE_KEY = 'multiagent_logs'
@@ -533,9 +571,10 @@ export function useChat() {
       agentMessages.push(agentMessage)
 
       // 多 Agent 场景下：等待打字效果完成后再进行下一个
-      // 给每个 Agent 1.8 秒的打字时间，避免明显停顿
+      // 根据响应内容长度计算实际的打字时间
       if (totalAgents > 1 && i < agents.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1800))
+        const typingTime = estimateTypingTime(agentMessage)
+        await new Promise(resolve => setTimeout(resolve, typingTime))
       }
     }
 
