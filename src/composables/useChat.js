@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { AGENT_RESPONSE_TEMPLATES, LOG_TEMPLATES } from '../utils/constants'
 import { MOCK_MESSAGES, MOCK_LOGS } from '../utils/mockData'
 import { RESPONSE_TYPES, getAgentResponseTypes } from '../utils/responseTypes'
+import { KEYWORD_RESPONSES, DEFAULT_RESPONSES } from '../utils/keywordResponses.js'
 
 // LocalStorage keys
 const MESSAGES_STORAGE_KEY = 'multiagent_messages'
@@ -343,6 +344,39 @@ export function useChat() {
     }
   }
 
+  // Agent 图标到关键词响应类型的映射
+  const iconToResponseMap = {
+    'code': 'code',
+    'search': 'research',
+    'document': 'writing',
+    'chart': 'data',
+    'palette': 'design',
+    'lightbulb': 'strategy',
+    'rocket': 'product',
+    'chat': 'chat'
+  }
+
+  // 关键词匹配响应函数
+  const matchResponse = (agent, userMessage) => {
+    const responseType = iconToResponseMap[agent.icon] || 'chat'
+    const agentResponses = KEYWORD_RESPONSES[responseType]
+
+    if (!agentResponses) {
+      // 如果没有匹配的关键词响应，使用默认响应
+      return DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code
+    }
+
+    for (const item of agentResponses) {
+      if (item.keywords.some(k => userMessage.toLowerCase().includes(k))) {
+        // 深拷贝避免修改原数据
+        return JSON.parse(JSON.stringify(item.response))
+      }
+    }
+
+    // 如果没有匹配的关键词，返回默认响应
+    return DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code
+  }
+
   // 计算文本的打字时间估算
   const estimateTypingTime = (response) => {
     // 打字机效果速度约为 20-50ms/字符，平均 35ms
@@ -379,8 +413,8 @@ export function useChat() {
     // 添加处理日志
     addLog(agent.name, '开始处理任务...')
 
-    // 生成结构化响应
-    const response = generateStructuredResponse(agent, userMessage)
+    // 使用关键词匹配生成响应
+    const response = matchResponse(agent, userMessage)
 
     // 添加完成日志
     addLog(agent.name, '任务处理完成')
