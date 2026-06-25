@@ -9,7 +9,7 @@ import { KEYWORD_RESPONSES, DEFAULT_RESPONSES } from '../utils/keywordResponses.
 const MESSAGES_STORAGE_KEY = 'multiagent_messages'
 const LOGS_STORAGE_KEY = 'multiagent_logs'
 const DATA_VERSION_KEY = 'multiagent_data_version'
-const CURRENT_DATA_VERSION = '2025-06-25-v2' // 数据版本号
+const CURRENT_DATA_VERSION = '2025-06-25-v3-mentions' // 数据版本号
 
 // 全局消息状态（所有组件共享）
 const messages = ref([])
