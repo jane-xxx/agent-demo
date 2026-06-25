@@ -297,45 +297,15 @@ const handleSend = async () => {
 
     inputText.value = ''
 
+    // 立即滚动，让用户看到自己的消息
+    nextTick(() => {
+      scrollAfterUserMessage()
+    })
+
     await sendPromise
 
-    // 等待 agent 响应渲染完成
-    await nextTick()
-
-    // 检查是否有图片响应需要等待加载
-    const hasImageResponse = messages.value.some(m =>
-      m.isNew && m.responseType === 'image' && m.data?.url
-    )
-
-    if (hasImageResponse) {
-      // 等待图片加载完成后再滚动
-      const waitForImages = () => {
-        return new Promise(resolve => {
-          const images = document.querySelectorAll('.generated-image[src]')
-          const loadPromises = Array.from(images).map(img => {
-            if (img.complete) {
-              return Promise.resolve()
-            }
-            return new Promise(resolve => {
-              img.addEventListener('load', resolve)
-              img.addEventListener('error', resolve) // 即使加载失败也继续
-            })
-          })
-          Promise.all(loadPromises).then(resolve)
-        })
-      }
-
-      await waitForImages()
-      await nextTick()
-    }
-
-    // 现在执行滚动
-    scrollAfterUserMessage()
-
-    // 延迟重置 padding
-    setTimeout(() => {
-      resetPadding()
-    }, 100)
+    // 回复完成后重置 padding
+    resetPadding()
   } catch (error) {
     console.error('发送消息失败:', error)
   }
@@ -566,9 +536,15 @@ const scrollAfterUserMessage = () => {
       userScrolled.value = false
       isNearBottom.value = false
       showScrollButton.value = true
+
+      // 保存当前滚动位置，防止图片加载时跳动
+      savedScrollPosition.value = maxScrollTop
     })
   })
 }
+
+// 保存滚动位置，防止图片加载时跳动
+const savedScrollPosition = ref(null)
 
 // 重置 padding 到原始值
 const resetPadding = () => {
@@ -578,6 +554,22 @@ const resetPadding = () => {
 
     // 恢复到原始的 padding-bottom
     container.style.paddingBottom = originalPaddingBottom.value + 'px'
+
+    // 图片加载时可能导致滚动位置变化，需要恢复
+    // 使用 setTimeout 确保在图片加载完成后执行
+    setTimeout(() => {
+      if (savedScrollPosition.value !== null && container) {
+        const currentScrollTop = container.scrollTop
+        // 如果滚动位置发生了明显变化（超过10px），恢复到保存的位置
+        if (Math.abs(currentScrollTop - savedScrollPosition.value) > 10) {
+          container.scrollTo({
+            top: savedScrollPosition.value,
+            behavior: 'auto'
+          })
+        }
+        savedScrollPosition.value = null
+      }
+    }, 200)
   })
 }
 
