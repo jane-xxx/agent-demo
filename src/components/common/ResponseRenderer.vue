@@ -220,12 +220,10 @@ const showLightbox = ref(false)
 
 // 图片加载事件
 const onImageLoad = () => {
-  // 使用 nextTick 确保 DOM 更新完成后再改变状态
-  // 防止图片加载时导致滚动位置跳动
-  nextTick(() => {
-    imageLoading.value = false
-    imageError.value = false
-  })
+  // 图片加载完成后更新状态
+  // 不触发任何滚动相关的操作
+  imageLoading.value = false
+  imageError.value = false
 }
 
 const onImageError = (e) => {
@@ -424,13 +422,11 @@ onMounted(() => {
   // 处理图片初始状态
   if (props.responseType === RESPONSE_TYPES.IMAGE && props.data?.url) {
     nextTick(() => {
-      nextTick(() => {
-        const img = document.querySelector(`img[src="${props.data.url}"]`)
-        if (img && img.complete && img.naturalHeight > 0) {
-          imageLoading.value = false
-          imageError.value = false
-        }
-      })
+      const img = document.querySelector(`img[src="${props.data.url}"]`)
+      if (img && img.complete && img.naturalHeight > 0) {
+        imageLoading.value = false
+        imageError.value = false
+      }
     })
   }
 
