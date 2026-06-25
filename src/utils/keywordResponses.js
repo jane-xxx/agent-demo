@@ -4,7 +4,7 @@ import { RESPONSE_TYPES } from './responseTypes.js'
 export const KEYWORD_RESPONSES = {
   code: [
     {
-      keywords: ['bug', '修复', '错误', 'leak', '泄漏', '警告', 'warning'],
+      keywords: ['bug', '修复', '错误', 'leak', '泄漏', '警告', 'warning', 'fix', 'error'],
       response: {
         responseType: RESPONSE_TYPES.COMPOSITE,
         data: {
@@ -868,6 +868,41 @@ describe('useCounter', () => {
         }
       }
     }
+  ],
+  chat: [
+    {
+      keywords: ['分析', '建议', '如何', '怎么', 'what', 'how', '为什么'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: '**综合分析**\n\n这个问题涉及多个层面，我建议：\n\n• **短期**：快速验证核心假设\n• **中期**：优化和完善解决方案\n• **长期**：建立可持续的竞争优势\n\n需要更详细的某个方面分析吗？'
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['讨论', '想法', '意见', 'discuss', 'idea', 'opinion'],
+      response: {
+        responseType: RESPONSE_TYPES.TEXT,
+        data: {
+          content: `**多角度思考**
+
+从不同角度来看这个问题：
+
+• **用户视角**：关注体验和效率
+• **技术视角**：考虑可行性和成本
+• **商业视角**：评估价值和收益
+
+你想深入探讨哪个方向？`
+        }
+      }
+    }
   ]
 }
 
@@ -972,6 +1007,19 @@ export const DEFAULT_RESPONSES = {
 • 功能设计
 
 请告诉我具体需求。`
+    }
+  },
+  chat: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以从多个角度为你分析和提供建议。
+
+**请告诉我：**
+• 你想解决的具体问题
+• 需要分析的维度（技术/商业/用户体验）
+• 期望的输出形式（建议/方案/对比）
+
+我会给出综合性的分析。`
     }
   }
 }
