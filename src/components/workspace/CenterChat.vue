@@ -247,7 +247,7 @@ const isNearBottom = ref(true) // 用户是否在底部附近
 const showScrollButton = ref(false) // 是否显示滚动按钮
 const scrollButtonBadge = ref('') // 按钮上的徽章文字
 const userScrolled = ref(false) // 用户是否手动滚动过
-const originalPaddingBottom = ref(0) // 保存原始的 padding-bottom 值
+// originalPaddingBottom 已移除，新滚动逻辑不再使用 padding
 const isInitialLoading = ref(false) // 首次加载消息时的加载状态
 
 // Mention picker state
@@ -514,63 +514,31 @@ const scrollAfterUserMessage = () => {
     const container = chatContent.value
     if (!container) return
 
-    // 在底部增加 padding 来扩大滚动范围
-    const extraPadding = container.clientHeight * 0.5
+    // 获取用户消息元素（最后一条消息）
+    const messages = container.querySelectorAll('.message-item')
+    const lastMessage = messages[messages.length - 1]
 
-    // 设置新的 padding-bottom
-    const newPadding = originalPaddingBottom.value + extraPadding
-    container.style.paddingBottom = newPadding + 'px'
+    if (!lastMessage) return
 
-    // 等待 DOM 更新后计算新的滚动高度
-    nextTick(() => {
-      const scrollHeight = container.scrollHeight
-      const clientHeight = container.clientHeight
-      const maxScrollTop = scrollHeight - clientHeight
+    // 计算目标滚动位置：让用户消息出现在视口上方 20% 的位置
+    const messageTop = lastMessage.offsetTop
+    const targetScrollTop = messageTop - (container.clientHeight * 0.2)
 
-      // 滚动到新增加的底部空间，让新消息出现在可视区域上方
-      container.scrollTo({
-        top: maxScrollTop,
-        behavior: 'auto'
-      })
-
-      userScrolled.value = false
-      isNearBottom.value = false
-      showScrollButton.value = true
-
-      // 保存当前滚动位置，防止图片加载时跳动
-      savedScrollPosition.value = maxScrollTop
+    // 直接滚动到目标位置，不使用 padding
+    container.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'auto'
     })
+
+    userScrolled.value = false
+    isNearBottom.value = false
+    showScrollButton.value = true
   })
 }
 
-// 保存滚动位置，防止图片加载时跳动
-const savedScrollPosition = ref(null)
-
-// 重置 padding 到原始值
+// 重置 padding 到原始值（保留以防万一）
 const resetPadding = () => {
-  nextTick(() => {
-    const container = chatContent.value
-    if (!container) return
-
-    // 恢复到原始的 padding-bottom
-    container.style.paddingBottom = originalPaddingBottom.value + 'px'
-
-    // 图片加载时可能导致滚动位置变化，需要恢复
-    // 使用 setTimeout 确保在图片加载完成后执行
-    setTimeout(() => {
-      if (savedScrollPosition.value !== null && container) {
-        const currentScrollTop = container.scrollTop
-        // 如果滚动位置发生了明显变化（超过10px），恢复到保存的位置
-        if (Math.abs(currentScrollTop - savedScrollPosition.value) > 10) {
-          container.scrollTo({
-            top: savedScrollPosition.value,
-            behavior: 'auto'
-          })
-        }
-        savedScrollPosition.value = null
-      }
-    }, 200)
-  })
+  // 新逻辑不再使用 padding，此函数保留为空函数以保持兼容性
 }
 
 // Get agent icon component
@@ -641,11 +609,6 @@ watch(() => messages.value, (newMessages, oldMessages = []) => {
 
 // Auto-scroll when messages change
 onMounted(() => {
-  // 保存原始的 padding-bottom 值
-  if (chatContent.value) {
-    originalPaddingBottom.value = parseInt(getComputedStyle(chatContent.value).paddingBottom) || 24
-  }
-
   // 添加滚动监听
   if (chatContent.value) {
     chatContent.value.addEventListener('scroll', handleScroll)
