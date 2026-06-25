@@ -335,12 +335,540 @@ describe('useCounter', () => {
       }
     }
   ],
-  research: [],
-  writing: [],
-  data: [],
-  design: [],
-  strategy: [],
-  product: []
+  research: [
+    {
+      keywords: ['市场', '调研', '分析', 'market', 'research', 'study'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**市场调研分析报告**
+
+根据你的需求，我整理了以下市场调研结果：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.TABLE,
+              data: {
+                headers: ['维度', '数据', '趋势', '洞察'],
+                rows: [
+                  ['市场规模', '¥280亿 (2024)', '年增32%', '企业数字化转型驱动'],
+                  ['用户需求', '效率提升首选', '向智能化演进', 'AI+工作流是热点'],
+                  ['竞争格局', '头部占60%', '整合加速', '垂直领域有机会'],
+                  ['技术趋势', '大模型落地', '多模态融合', 'Agent 协同是方向']
+                ],
+                caption: '市场调研核心发现'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.DOCUMENT,
+              data: {
+                sections: [
+                  {
+                    title: '关键洞察',
+                    content: '1. 市场处于快速成长期，预计未来3年将保持30%+年增长率\n2. 头部厂商通过并购整合，中小厂商需找准差异化定位\n3. 用户最关心的是产品能真正融入工作流，而非单一功能'
+                  },
+                  {
+                    title: '差异化建议',
+                    content: '建议从以下方向切入：\n• 专注中文垂直场景（如法律、医疗、金融）\n• 深度整合企业现有工作流（IM、文档、CRM）\n• 提供企业级定制服务和私有化部署'
+                  },
+                  {
+                    title: '下一步行动',
+                    content: '建议优先进行用户访谈，验证目标场景的真实痛点。我可以帮你设计访谈提纲。'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['竞品', '对比', '竞争对手', 'competitor', 'vs', '比较'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**竞品对比分析**
+
+以下是主要竞品的功能对比：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.TABLE,
+              data: {
+                headers: ['产品', '核心功能', '优势', '劣势', '定价'],
+                rows: [
+                  ['产品A', '智能问答', '响应快', '功能单一', '¥49/月'],
+                  ['产品B', '文档协作', '集成好', '价格高', '¥199/月'],
+                  ['产品C', '全流程支持', '功能全面', '上手复杂', '¥99/月'],
+                  ['我们的产品', '差异化定位', '垂直深耕', '需要验证', '待定']
+                ],
+                caption: '竞品功能对比矩阵'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.CHART,
+              data: {
+                diagram: `graph TD
+    A[市场需求] --> B{竞争分析}
+    B --> C[产品A]
+    B --> D[产品B]
+    B --> E[产品C]
+    B --> F[我们]
+
+    C --> C1[功能强但单一]
+    D --> D1[集成好但贵]
+    E --> E1[全但复杂]
+    F --> F1[垂直+易用]
+
+    style F1 fill:#10b981`,
+                caption: '竞争定位分析'
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['趋势', '方向', '未来', 'trend', 'forecast', '预测'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**行业趋势洞察**
+
+基于当前数据，我对未来1-3年的趋势预测如下：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.DOCUMENT,
+              data: {
+                sections: [
+                  {
+                    title: '短期趋势 (6-12个月)',
+                    content: '• AI Agent 从单一任务向多任务协同发展\n• 企业开始大规模试点，主要在知识密集型岗位\n• 开源模型能力快速追赶闭源'
+                  },
+                  {
+                    title: '中期趋势 (1-2年)',
+                    content: '• Agent 成为企业级应用标配\n• 垂直行业解决方案成熟\n• 监管框架逐步完善'
+                  },
+                  {
+                    title: '长期趋势 (2-3年)',
+                    content: '• 多模态 Agent (文本+图像+语音) 成为主流\n• Agent 经济体系形成 (Agent 之间可以交易)\n• 个人专属 Agent 普及'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  writing: [
+    {
+      keywords: ['文案', '产品', '介绍', 'copy', 'intro', 'description'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**产品文案生成**
+
+根据你的需求，我为你生成了以下产品文案：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.DOCUMENT,
+              data: {
+                sections: [
+                  {
+                    title: '版本一：功能导向',
+                    content: `**产品名称**：[填写产品名]
+
+**一句话描述**：
+让 [目标用户] 能够 [核心价值]，比 [传统方案] 快 [X] 倍。
+
+**核心亮点**：
+• **效率提升**：自动化处理 [具体场景]，节省 80% 时间
+• **简单易用**：3 步完成操作，无需专业培训
+• **可靠稳定**：99.9% 可用性，企业级安全保障`
+                  },
+                  {
+                    title: '版本二：情感导向',
+                    content: `**产品名称**：[填写产品名]
+
+**情感连接**：
+终于有一个工具，懂 [目标用户] 的真实需求。
+
+**价值主张**：
+不再被 [痛点问题] 困扰，让 [期望结果] 轻松实现。`
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['邮件', '商务', '通知', 'email', 'mail', '通知'],
+      response: {
+        responseType: RESPONSE_TYPES.DOCUMENT,
+        data: {
+          sections: [
+            {
+              title: '邮件主题',
+              content: '📢 重要通知：关于 [事项] 的说明'
+            },
+            {
+              title: '邮件正文',
+              content: `尊敬的 [用户/客户/合作伙伴]，
+
+感谢您一直以来的支持与信任。
+
+**事项说明**：
+关于 [具体事项]，我们特此通知：[详细说明]
+
+**后续安排**：
+• 时间：[具体时间]
+• 注意事项：[重要提醒]
+• 联系方式：[对接人信息]
+
+如有任何疑问，请随时联系。
+
+祝好！
+
+[发送方]
+[日期]`
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['公告', '发布', '更新', 'announcement', 'release', 'update'],
+      response: {
+        responseType: RESPONSE_TYPES.DOCUMENT,
+        data: {
+          sections: [
+            {
+              title: '公告标题',
+              content: '🚀 重磅发布：[产品名称] 全新上线'
+            },
+            {
+              title: '开篇',
+              content: `亲爱的用户们：
+
+经过团队 [X] 个月的精心打磨，我们非常激动地向您介绍 [产品名称]——一款能够 [核心价值] 的全新产品。`
+            },
+            {
+              title: '核心亮点',
+              content: `**✨ 功能一**：[描述]
+让你能够 [用户收益]
+
+**⚡ 功能二**：[描述]
+效率提升 [X]%
+
+**🔒 功能三**：[描述]
+企业级安全保障`
+            },
+            {
+              title: '限时优惠',
+              content: `🎁 现在注册，享受首月免费试用！
+👉 立即体验：[链接]`
+            }
+          ]
+        }
+      }
+    }
+  ],
+  data: [
+    {
+      keywords: ['数据', '分析', '统计', 'analytics', 'statistics', 'metric'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**数据分析报告**
+
+根据你提供的数据，我完成了以下分析：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.TABLE,
+              data: {
+                headers: ['指标', '当前值', '环比', '同比', '趋势'],
+                rows: [
+                  ['活跃用户', '12,345', '+15%', '+45%', '↗ 上升'],
+                  ['转化率', '3.2%', '+0.8%', '+1.2%', '↗ 上升'],
+                  ['客单价', '¥256', '-5%', '+12%', '→ 稳定'],
+                  ['留存率', '42%', '+3%', '+8%', '↗ 上升']
+                ],
+                caption: '核心指标分析'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.FORMULA,
+              data: {
+                formulas: [
+                  '\\text{增长率} = \\frac{\\text{本期值} - \\text{上期值}}{\\text{上期值}} \\times 100\\%',
+                  '\\text{转化率} = \\frac{\\text{转化用户数}}{\\text{总用户数}} \\times 100\\%',
+                  '\\text{留存率} = \\frac{\\text{N日后活跃用户}}{\\text{初始用户}} \\times 100\\%'
+                ],
+                explanation: '整体来看，核心指标保持健康增长。建议关注客单价的下降趋势，可能需要分析产品组合或定价策略。'
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['报表', '图表', '可视化', 'report', 'chart', 'visualization'],
+      response: {
+        responseType: RESPONSE_TYPES.CHART,
+        data: {
+          diagram: `pie title 数据分布
+    "产品A" : 35
+    "产品B" : 25
+    "产品C" : 20
+    "产品D" : 15
+    "其他" : 5`,
+          caption: '业务数据分布图'
+        }
+      }
+    }
+  ],
+  design: [
+    {
+      keywords: ['设计', 'ui', '界面', 'design', 'interface', 'ux'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**UI 设计方案**
+
+根据你的需求，我提供了以下设计建议：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.IMAGE,
+              data: {
+                url: 'https://picsum.photos/seed/ui-design/800/600',
+                alt: 'UI 设计稿'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.DOCUMENT,
+              data: {
+                sections: [
+                  {
+                    title: '设计原则',
+                    content: '• 保持一致性：颜色、字体、间距统一\n• 强调层级：通过大小和颜色引导注意力\n• 简化交互：减少用户操作步骤'
+                  },
+                  {
+                    title: '配色建议',
+                    content: '主色：#6366f1 (紫色)\n辅色：#8b5cf6 (浅紫)\n强调色：#f59e0b (橙色)\n中性色：#64748b (灰蓝)'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['配色', '颜色', '风格', 'color', 'palette', 'theme'],
+      response: {
+        responseType: RESPONSE_TYPES.TABLE,
+        data: {
+          headers: ['颜色', '色值', '用途', '心理感受'],
+          rows: [
+            ['主色', '#6366f1', '按钮、链接', '专业、信任'],
+            ['辅色', '#8b5cf6', '图标、装饰', '创意、灵感'],
+            ['成功', '#10b981', '成功提示', '积极、完成'],
+            ['警告', '#f59e0b', '警告提示', '注意、谨慎'],
+            ['错误', '#ef4444', '错误提示', '紧急、停止']
+          ],
+          caption: '配色方案建议'
+        }
+      }
+    }
+  ],
+  strategy: [
+    {
+      keywords: ['战略', '规划', '计划', 'strategy', 'plan', 'roadmap'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**战略规划建议**
+
+基于你的需求，我制定了以下战略规划：`
+              }
+            },
+            {
+              type: RESPONSE_TYPES.TABLE,
+              data: {
+                headers: ['阶段', '时间', '关键任务', '成功指标'],
+                rows: [
+                  ['Phase 1 - 验证', 'Q1', 'MVP开发+用户测试', '100个种子用户'],
+                  ['Phase 2 - 扩展', 'Q2', '功能完善+市场推广', '1000个活跃用户'],
+                  ['Phase 3 - 规模化', 'Q3-Q4', '团队扩张+生态建设', '10000个付费用户']
+                ],
+                caption: '战略路线图'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.DOCUMENT,
+              data: {
+                sections: [
+                  {
+                    title: '核心战略',
+                    content: '• 聚焦垂直场景，避免与巨头正面竞争\n• 产品驱动增长，通过口碑传播获客\n• 建立数据飞轮，用数据反哺产品'
+                  },
+                  {
+                    title: '风险预案',
+                    content: '• 技术风险：保持技术栈更新，避免被淘汰\n• 竞争风险：建立核心壁垒（数据、网络效应）\n• 资金风险：控制 burn rate，保持 18 个月跑道'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['增长', '推广', '运营', 'growth', 'marketing', 'promotion'],
+      response: {
+        responseType: RESPONSE_TYPES.DOCUMENT,
+        data: {
+          sections: [
+            {
+              title: '增长策略框架',
+              content: `**AARRR 模型应用**
+
+• Acquisition（获取）：内容营销+SEO+社区合作
+• Activation（激活）：优化 onboarding 流程
+• Retention（留存）：定期更新+用户社区
+• Revenue（收入）：Freemium 模式+增值服务
+• Referral（推荐）：推荐奖励+分享激励`
+            },
+            {
+              title: '短期行动',
+              content: '1. 发布 3 篇深度行业文章\n2. 参加 2 个行业会议/活动\n3. 启动用户推荐计划'
+            }
+          ]
+        }
+      }
+    }
+  ],
+  product: [
+    {
+      keywords: ['需求', '功能', 'prd', 'requirement', 'feature'],
+      response: {
+        responseType: RESPONSE_TYPES.DOCUMENT,
+        data: {
+          sections: [
+            {
+              title: 'PRD 文档结构',
+              content: `**产品需求文档 (PRD)**
+
+**1. 背景**
+• 为什么做这个功能？
+• 解决什么问题？
+• 优先级是什么？
+
+**2. 目标用户**
+• 目标用户画像
+• 使用场景描述`
+            },
+            {
+              title: '功能需求',
+              content: `**3. 功能描述**
+• 用户故事
+• 功能列表
+• 交互流程
+
+**4. 非功能需求**
+• 性能要求
+• 安全要求
+• 兼容性要求`
+            },
+            {
+              title: '成功指标',
+              content: `**5. 成功指标**
+• 使用率：X% 用户使用
+• 满意度：X 分以上
+• 转化率：X% 以上
+
+**6. 上线计划**
+• 开发排期
+• 测试计划
+• 发布策略`
+            }
+          ]
+        }
+      }
+    },
+    {
+      keywords: ['路线图', '规划', '迭代', 'roadmap', 'iteration', 'sprint'],
+      response: {
+        responseType: RESPONSE_TYPES.COMPOSITE,
+        data: {
+          items: [
+            {
+              type: RESPONSE_TYPES.CHART,
+              data: {
+                diagram: `gantt
+    title 产品路线图
+    dateFormat YYYY-MM-DD
+    section Q1
+    MVP开发 :a1, 2025-01-01, 60d
+    section Q2
+    功能完善 :a2, 2025-04-01, 60d
+    section Q3
+    市场推广 :a3, 2025-07-01, 60d
+    section Q4
+    生态建设 :a4, 2025-10-01, 60d`,
+                caption: '2025年产品路线图'
+              }
+            },
+            {
+              type: RESPONSE_TYPES.TEXT,
+              data: {
+                content: `**迭代说明**
+
+• 每个季度一个大版本
+• 每月一个小版本更新
+• 每两周一个 bug 修复版本`
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
 }
 
 // 默认 fallback 响应
@@ -359,10 +887,91 @@ export const DEFAULT_RESPONSES = {
 有了这些信息，我可以提供更有针对性的解决方案。`
     }
   },
-  research: null,
-  writing: null,
-  data: null,
-  design: null,
-  strategy: null,
-  product: null
+  research: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `关于这个研究主题，我可以从多个维度进行分析。
+
+**请告诉我你关注的重点：**
+• 市场规模和增长趋势
+• 竞争格局和主要玩家
+• 技术发展方向
+• 用户需求和痛点
+
+有了明确方向，我可以提供更有深度的分析。`
+    }
+  },
+  writing: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以帮你撰写各类文案。请告诉我：
+
+**文案类型：**
+• 产品介绍
+• 营销邮件
+• 公告通知
+• 其他
+
+**关键信息：**
+• 目标受众
+• 核心卖点
+• 期望风格（正式/活泼/专业）
+
+我会根据你的需求生成合适的文案。`
+    }
+  },
+  data: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以帮你进行数据分析和可视化。
+
+**请提供：**
+• 数据来源或数据集描述
+• 想了解的指标或问题
+• 期望的输出形式（报表/图表/洞察）
+
+我会帮你完成分析并给出结论。`
+    }
+  },
+  design: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以提供设计相关的建议。
+
+**请告诉我你的需求：**
+• UI/UX 设计
+• 配色方案
+• 界面优化
+• 设计规范
+
+我会给出专业的设计建议。`
+    }
+  },
+  strategy: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以帮你制定战略规划。
+
+**请告诉我：**
+• 规划的时间范围
+• 当前所处阶段
+• 核心目标是什么
+
+我会帮你制定可执行的战略方案。`
+    }
+  },
+  product: {
+    responseType: RESPONSE_TYPES.TEXT,
+    data: {
+      content: `我可以帮你完成产品相关工作。
+
+**需要协助：**
+• PRD 文档编写
+• 路线图规划
+• 需求优先级排序
+• 功能设计
+
+请告诉我具体需求。`
+    }
+  }
 }
