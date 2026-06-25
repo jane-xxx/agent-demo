@@ -220,8 +220,12 @@ const showLightbox = ref(false)
 
 // 图片加载事件
 const onImageLoad = () => {
-  imageLoading.value = false
-  imageError.value = false
+  // 使用 nextTick 确保 DOM 更新完成后再改变状态
+  // 防止图片加载时导致滚动位置跳动
+  nextTick(() => {
+    imageLoading.value = false
+    imageError.value = false
+  })
 }
 
 const onImageError = (e) => {

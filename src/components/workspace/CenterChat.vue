@@ -297,15 +297,45 @@ const handleSend = async () => {
 
     inputText.value = ''
 
-    // 立即滚动
-    nextTick(() => {
-      scrollAfterUserMessage()
-    })
-
     await sendPromise
 
-    // 回复完成后重置 padding
-    resetPadding()
+    // 等待 agent 响应渲染完成
+    await nextTick()
+
+    // 检查是否有图片响应需要等待加载
+    const hasImageResponse = messages.value.some(m =>
+      m.isNew && m.responseType === 'image' && m.data?.url
+    )
+
+    if (hasImageResponse) {
+      // 等待图片加载完成后再滚动
+      const waitForImages = () => {
+        return new Promise(resolve => {
+          const images = document.querySelectorAll('.generated-image[src]')
+          const loadPromises = Array.from(images).map(img => {
+            if (img.complete) {
+              return Promise.resolve()
+            }
+            return new Promise(resolve => {
+              img.addEventListener('load', resolve)
+              img.addEventListener('error', resolve) // 即使加载失败也继续
+            })
+          })
+          Promise.all(loadPromises).then(resolve)
+        })
+      }
+
+      await waitForImages()
+      await nextTick()
+    }
+
+    // 现在执行滚动
+    scrollAfterUserMessage()
+
+    // 延迟重置 padding
+    setTimeout(() => {
+      resetPadding()
+    }, 100)
   } catch (error) {
     console.error('发送消息失败:', error)
   }
