@@ -560,6 +560,36 @@ const loginForm = useForm<LoginForm>({
         ]
       },
       timestamp: '09:25'
+    },
+    {
+      id: 'msg-207',
+      type: 'user',
+      content: '这个版本不错！能再调整一下，把限时优惠改成更有紧迫感的说法？',
+      timestamp: '09:28'
+    },
+    {
+      id: 'msg-208',
+      type: 'agent',
+      agentId: 3,
+      agentName: 'Writing Agent',
+      agentColor: '#a855f7',
+      agentIcon: 'document',
+      responseType: RESPONSE_TYPES.TEXT,
+      data: {
+        content: `**增加紧迫感的几种方式**
+
+1. **倒计时**："仅剩 48 小时！"
+2. **限量**："限前 100 名用户"
+3. **涨价预警**："价格即将上调"
+
+我建议结合使用倒计时 + 涨价预警：
+
+> "限时特惠：本周五午夜后恢复原价
+> 立即注册立省 30%"
+
+这样既制造了紧迫感，又不会让用户觉得是虚假营销。是否按这个方向修改？`
+      },
+      timestamp: '09:31'
     }
   ],
   'team-004': [
@@ -821,6 +851,8 @@ export const MOCK_LOGS = {
     { time: '10:15:00', content: '用户: 创建市场调研任务' }
   ],
   'team-003': [
+    { time: '09:31:30', content: 'Writing Agent: 提供紧迫感文案建议' },
+    { time: '09:28:15', content: '用户: 要求增加紧迫感表达' },
     { time: '09:25:30', content: 'Writing Agent: 添加用户引用' },
     { time: '09:20:15', content: '用户: 要求添加用户引用' },
     { time: '09:16:20', content: 'Writing Agent: 优化文案吸引力' },
