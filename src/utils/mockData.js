@@ -709,6 +709,88 @@ const loginForm = useForm<LoginForm>({
         explanation: '根据计算，本季度销售额同比增长 23.5%，复合年增长率约 7.2%。'
       },
       timestamp: '11:25'
+    },
+    {
+      id: 'msg-404',
+      type: 'user',
+      content: '能帮我预测一下下季度的趋势吗？',
+      timestamp: '11:30'
+    },
+    {
+      id: 'msg-405',
+      type: 'agent',
+      agentId: 5,
+      agentName: 'Data Analyst Agent',
+      agentColor: '#e17055',
+      agentIcon: 'chart',
+      responseType: RESPONSE_TYPES.COMPOSITE,
+      data: {
+        items: [
+          {
+            type: RESPONSE_TYPES.TEXT,
+            data: {
+              content: '**下季度趋势预测**\n\n基于历史数据和市场信号，我做出了以下预测：'
+            }
+          },
+          {
+            type: RESPONSE_TYPES.CHART,
+            data: {
+              diagram: `graph LR
+    A[Q2数据] --> B[分析模型]
+    B --> C{预测结果}
+    C --> D[乐观: +25%]
+    C --> E[中性: +15%]
+    C --> F[保守: +8%]
+
+    style D fill:#10b981
+    style E fill:#f59e0b
+    style F fill:#ef4444`,
+              caption: 'Q3 预测模型'
+            }
+          },
+          {
+            type: RESPONSE_TYPES.TABLE,
+            data: {
+              headers: ['情景', '增长率', '关键假设', '建议'],
+              rows: [
+                ['乐观', '+25%', '市场热度持续+竞品放缓', '加大投入'],
+                ['中性', '+15%', '维持现状', '稳步推进'],
+                ['保守', '+8%', '经济放缓+竞争加剧', '控制成本']
+              ],
+              caption: '情景分析'
+            }
+          }
+        ]
+      },
+      timestamp: '11:36'
+    },
+    {
+      id: 'msg-406',
+      type: 'user',
+      content: '哪个情景最可能发生？',
+      timestamp: '11:40'
+    },
+    {
+      id: 'msg-407',
+      type: 'agent',
+      agentId: 5,
+      agentName: 'Data Analyst Agent',
+      agentColor: '#e17055',
+      agentIcon: 'chart',
+      responseType: RESPONSE_TYPES.TEXT,
+      data: {
+        content: `**概率判断**
+
+基于当前信号，我认为：
+
+• **中性情景 (60%)**：最可能，建议按此计划预算
+• **乐观情景 (25%)**：有一定可能，准备好扩张预案
+• **保守情景 (15%)**：小概率，做好风险对冲
+
+**建议策略**：
+按中性情景规划，同时保持灵活性——每月重新评估，根据早期信号调整方向。`
+      },
+      timestamp: '11:45'
     }
   ]
 }
@@ -761,6 +843,10 @@ export const MOCK_LOGS = {
     { time: '16:20:00', content: '用户: 创建 UI 设计任务' }
   ],
   'team-005': [
+    { time: '11:45:30', content: 'Data Analyst: 给出情景概率判断' },
+    { time: '11:40:15', content: '用户: 询问最可能情景' },
+    { time: '11:36:20', content: 'Data Analyst: 完成趋势预测分析' },
+    { time: '11:30:00', content: '用户: 请求下季度预测' },
     { time: '11:25:45', content: 'Data Analyst: 完成数据分析' },
     { time: '11:15:20', content: 'Data Analyst: 生成销售表格' },
     { time: '11:05:15', content: 'Data Analyst: 开始数据分析' },
