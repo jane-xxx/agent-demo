@@ -514,30 +514,66 @@ const scrollAfterUserMessage = () => {
     const container = chatContent.value
     if (!container) return
 
-    // 获取所有消息元素（使用正确的 class 选择器）
-    const messageElements = container.querySelectorAll('.chat-content > .message')
-    const lastMessage = messageElements[messageElements.length - 1]
+    // 获取当前滚动状态（调试用）
+    const beforeScrollTop = container.scrollTop
+    const beforeScrollHeight = container.scrollHeight
+    const beforeClientHeight = container.clientHeight
 
-    if (!lastMessage) {
-      console.warn('[scrollAfterUserMessage] No message element found')
-      return
-    }
-
-    // 计算目标滚动位置：让用户消息出现在视口上方 50% 的位置
-    const messageTop = lastMessage.offsetTop
-    const targetScrollTop = messageTop - (container.clientHeight * 0.5)
-
-    console.log('[scrollAfterUserMessage] Scrolling to:', targetScrollTop, 'Message top:', messageTop, '(50% viewport)')
-
-    // 直接滚动到目标位置
-    container.scrollTo({
-      top: Math.max(0, targetScrollTop),
-      behavior: 'auto'
+    console.log('[scrollAfterUserMessage] BEFORE:', {
+      scrollTop: beforeScrollTop,
+      scrollHeight: beforeScrollHeight,
+      clientHeight: beforeClientHeight,
+      maxScrollTop: beforeScrollHeight - beforeClientHeight
     })
 
-    userScrolled.value = false
-    isNearBottom.value = false
-    showScrollButton.value = true
+    // 需要等待消息实际渲染到 DOM
+    setTimeout(() => {
+      // 获取所有消息元素
+      const messageElements = container.querySelectorAll('.chat-content > .message')
+      const lastMessage = messageElements[messageElements.length - 1]
+
+      if (!lastMessage) {
+        console.warn('[scrollAfterUserMessage] No message element found')
+        return
+      }
+
+      // 获取消息位置
+      const messageTop = lastMessage.offsetTop
+      const messageHeight = lastMessage.offsetHeight
+
+      console.log('[scrollAfterUserMessage] Message:', {
+        messageTop,
+        messageHeight,
+        containerClientHeight: container.clientHeight
+      })
+
+      // 计算目标滚动位置：让用户消息出现在视口上方 50% 的位置
+      const targetScrollTop = messageTop - (container.clientHeight * 0.5)
+
+      console.log('[scrollAfterUserMessage] Calculated scroll position:', {
+        targetScrollTop: Math.max(0, targetScrollTop),
+        formula: `${messageTop} - (${container.clientHeight} * 0.5)`
+      })
+
+      // 直接滚动到目标位置
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'auto'
+      })
+
+      // 验证滚动结果
+      setTimeout(() => {
+        const afterScrollTop = container.scrollTop
+        console.log('[scrollAfterUserMessage] AFTER:', {
+          scrollTop: afterScrollTop,
+          difference: afterScrollTop - beforeScrollTop
+        })
+      }, 50)
+
+      userScrolled.value = false
+      isNearBottom.value = false
+      showScrollButton.value = true
+    }, 50) // 等待 DOM 渲染
   })
 }
 
