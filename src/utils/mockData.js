@@ -416,6 +416,60 @@ const loginForm = useForm<LoginForm>({
         ]
       },
       timestamp: '10:23'
+    },
+    {
+      id: 'msg-104',
+      type: 'user',
+      content: '哪些工具对中文支持比较好？',
+      timestamp: '10:25'
+    },
+    {
+      id: 'msg-105',
+      type: 'agent',
+      agentId: 2,
+      agentName: 'Research Agent',
+      agentColor: '#3498db',
+      agentIcon: 'search',
+      responseType: RESPONSE_TYPES.TABLE,
+      data: {
+        headers: ['产品', '中文支持', '评分', '特点'],
+        rows: [
+          ['产品A', '★★★★★', '9.2/10', '原生中文模型'],
+          ['产品B', '★★★★☆', '8.5/10', '经过中文微调'],
+          ['产品C', '★★★☆☆', '7.0/10', '通用模型'],
+          ['我们的产品', '★★★★★', '待验证', '专注中文场景']
+        ],
+        caption: '中文市场 AI 工具对比'
+      },
+      timestamp: '10:28'
+    },
+    {
+      id: 'msg-106',
+      type: 'user',
+      content: '我们的差异化机会在哪里？',
+      timestamp: '10:32'
+    },
+    {
+      id: 'msg-107',
+      type: 'agent',
+      agentId: 2,
+      agentName: 'Research Agent',
+      agentColor: '#3498db',
+      agentIcon: 'search',
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          {
+            title: '差异化机会',
+            content: '基于竞品分析，我认为有以下几个机会点：\n\n1. **垂直深耕**：专注特定行业（如法律、医疗、金融）的中文场景\n2. **工作流整合**：深度整合企业现有的 IM、文档、CRM 系统\n3. **私有化部署**：满足企业数据安全需求'
+          },
+          {
+            title: '建议行动',
+            content: '建议先选择 1-2 个垂直场景进行深度调研，验证真实需求后再扩展。'
+          }
+        ]
+      },
+      timestamp: '10:36'
     }
   ],
   'team-003': [
@@ -565,8 +619,11 @@ export const MOCK_LOGS = {
     { time: '14:30:00', content: '用户: 创建代码实现任务' }
   ],
   'team-002': [
-    { time: '10:28:30', content: 'Research Agent: 完成市场调研分析' },
-    { time: '10:25:15', content: 'Research Agent: 生成数据表格' },
+    { time: '10:36:30', content: 'Research Agent: 分析差异化机会' },
+    { time: '10:32:15', content: '用户: 询问差异化定位' },
+    { time: '10:28:20', content: 'Research Agent: 提供中文市场对比' },
+    { time: '10:25:00', content: '用户: 询问中文支持情况' },
+    { time: '10:23:45', content: 'Research Agent: 完成市场调研分析' },
     { time: '10:20:00', content: 'Research Agent: 收集竞品信息' },
     { time: '10:15:30', content: '系统: 任务分配给研究团队' },
     { time: '10:15:00', content: '用户: 创建市场调研任务' }
