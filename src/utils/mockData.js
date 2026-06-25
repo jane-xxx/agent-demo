@@ -508,6 +508,58 @@ const loginForm = useForm<LoginForm>({
         ]
       },
       timestamp: '09:08'
+    },
+    {
+      id: 'msg-203',
+      type: 'user',
+      content: '能不能帮我改得更有吸引力一点？',
+      timestamp: '09:12'
+    },
+    {
+      id: 'msg-204',
+      type: 'agent',
+      agentId: 3,
+      agentName: 'Writing Agent',
+      agentColor: '#a855f7',
+      agentIcon: 'document',
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          {
+            title: '优化版本',
+            content: '邮件主题：🚀 重磅发布：全新产品，重新定义您的工作方式\n\n尊敬的用户，\n\n经过 6 个月的精心打磨，我们激动地向您介绍全新版本的产品。\n\n**核心亮点**\n✓ 效率提升 40%，让您更快完成工作\n✓ 智能推荐系统，节省 50% 决策时间\n✓ 企业级安全，数据加密传输存储\n\n**限时优惠**\n首月免费试用，立即体验！\n\n点击下方按钮开启高效工作之旅。'
+          },
+          {
+            title: '优化说明',
+            content: '主要改进：\n• 增加具体数字（40%、50%）增强说服力\n• 使用列表格式提高可读性\n• 增加"限时优惠"元素提升紧迫感'
+          }
+        ]
+      },
+      timestamp: '09:16'
+    },
+    {
+      id: 'msg-205',
+      type: 'user',
+      content: '再加个用户引用会更好',
+      timestamp: '09:20'
+    },
+    {
+      id: 'msg-206',
+      type: 'agent',
+      agentId: 3,
+      agentName: 'Writing Agent',
+      agentColor: '#a855f7',
+      agentIcon: 'document',
+      responseType: RESPONSE_TYPES.DOCUMENT,
+      data: {
+        sections: [
+          {
+            title: '最终版本（含用户引用）',
+            content: '邮件主题：🚀 重磅发布：全新产品，重新定义您的工作方式\n\n尊敬的用户，\n\n经过 6 个月的精心打磨，我们激动地向您介绍全新版本的产品。\n\n**用户真实反馈**\n\n"使用这款产品后，我的工作效率提升了至少 40%。"\n— 张经理，某互联网公司\n\n"终于有一个工具真正懂我的需求，简单而强大。"\n— 李总监，传统企业\n\n**核心亮点**\n✓ 效率提升 40%，让您更快完成工作\n✓ 智能推荐系统，节省 50% 决策时间\n✓ 企业级安全，数据加密传输存储\n\n**限时优惠**\n首月免费试用，立即体验！\n\n点击下方按钮开启高效工作之旅。'
+          }
+        ]
+      },
+      timestamp: '09:25'
     }
   ],
   'team-004': [
@@ -629,6 +681,10 @@ export const MOCK_LOGS = {
     { time: '10:15:00', content: '用户: 创建市场调研任务' }
   ],
   'team-003': [
+    { time: '09:25:30', content: 'Writing Agent: 添加用户引用' },
+    { time: '09:20:15', content: '用户: 要求添加用户引用' },
+    { time: '09:16:20', content: 'Writing Agent: 优化文案吸引力' },
+    { time: '09:12:00', content: '用户: 要求修改文案' },
     { time: '09:08:45', content: 'Writing Agent: 完成营销邮件撰写' },
     { time: '09:05:15', content: 'Writing Agent: 生成文档结构' },
     { time: '09:02:15', content: 'Writing Agent: 开始撰写营销邮件' },
