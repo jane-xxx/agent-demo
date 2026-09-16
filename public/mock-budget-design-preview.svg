@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="78" y1="48" x2="896" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#181C30"/>
+      <stop offset="1" stop-color="#0B1020"/>
+    </linearGradient>
+    <linearGradient id="card" x1="179" y1="134" x2="762" y2="411" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34306A"/>
+      <stop offset="1" stop-color="#202750"/>
+    </linearGradient>
+    <linearGradient id="progress" x1="213" y1="277" x2="716" y2="277" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C6CFF"/>
+      <stop offset="1" stop-color="#C45CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" rx="28" fill="url(#bg)"/>
+  <rect x="34" y="34" width="164" height="472" rx="18" fill="#11162A" stroke="#303858"/>
+  <circle cx="69" cy="74" r="18" fill="#7568F5"/>
+  <path d="M62 74h14M69 67v14" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="58" y="132" width="104" height="14" rx="7" fill="#76809E"/>
+  <rect x="58" y="176" width="82" height="10" rx="5" fill="#4B5575"/>
+  <rect x="58" y="211" width="96" height="10" rx="5" fill="#4B5575"/>
+  <rect x="58" y="246" width="72" height="10" rx="5" fill="#4B5575"/>
+  <rect x="58" y="281" width="92" height="10" rx="5" fill="#4B5575"/>
+  <rect x="58" y="436" width="104" height="38" rx="12" fill="#282052"/>
+  <circle cx="78" cy="455" r="9" fill="#A78BFA"/>
+  <rect x="96" y="450" width="43" height="9" rx="4.5" fill="#C7C8E7"/>
+  <text x="238" y="91" fill="#EEF0FF" font-family="Arial, sans-serif" font-size="25" font-weight="700">预算管理</text>
+  <text x="238" y="122" fill="#8D96B7" font-family="Arial, sans-serif" font-size="14">本月预算使用情况与提醒状态</text>
+  <rect x="238" y="158" width="660" height="128" rx="18" fill="url(#card)" stroke="#4E4A92"/>
+  <text x="270" y="198" fill="#AEB4D4" font-family="Arial, sans-serif" font-size="15">本月总预算</text>
+  <text x="270" y="244" fill="white" font-family="Arial, sans-serif" font-size="37" font-weight="700">¥ 3,000</text>
+  <text x="600" y="198" fill="#AEB4D4" font-family="Arial, sans-serif" font-size="15">已使用</text>
+  <text x="600" y="244" fill="#FFB86B" font-family="Arial, sans-serif" font-size="37" font-weight="700">¥ 2,460</text>
+  <rect x="238" y="314" width="660" height="154" rx="18" fill="#141A2E" stroke="#303858"/>
+  <text x="270" y="353" fill="#EEF0FF" font-family="Arial, sans-serif" font-size="17" font-weight="700">餐饮预算</text>
+  <text x="814" y="353" fill="#FFB86B" font-family="Arial, sans-serif" font-size="14">已使用 82%</text>
+  <rect x="270" y="376" width="594" height="12" rx="6" fill="#2C3451"/>
+  <rect x="270" y="376" width="487" height="12" rx="6" fill="url(#progress)"/>
+  <rect x="270" y="410" width="186" height="30" rx="15" fill="#392B4B"/>
+  <circle cx="291" cy="425" r="5" fill="#F6B05F"/>
+  <text x="305" y="430" fill="#F2C78D" font-family="Arial, sans-serif" font-size="13">接近预算上限</text>
+</svg>

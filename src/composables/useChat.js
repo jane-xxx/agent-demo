@@ -4,6 +4,9 @@ import { AGENT_RESPONSE_TEMPLATES, LOG_TEMPLATES } from '../utils/constants'
 import { MOCK_MESSAGES, MOCK_LOGS } from '../utils/mockData'
 import { RESPONSE_TYPES, getAgentResponseTypes } from '../utils/responseTypes'
 import { KEYWORD_RESPONSES, DEFAULT_RESPONSES } from '../utils/keywordResponses.js'
+import { planCollaboration, createDemoDelivery, resolveFollowup, identifyTask, latestDeliveries } from '../utils/collaboration.js'
+// 等待工具
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 // 计算打字时间（基于内容长度）
 // 打字速度：20-50ms/字符，平均35ms
@@ -47,14 +50,27 @@ const estimateTypingTime = (response) => {
 const MESSAGES_STORAGE_KEY = 'multiagent_messages'
 const LOGS_STORAGE_KEY = 'multiagent_logs'
 const DATA_VERSION_KEY = 'multiagent_data_version'
-const CURRENT_DATA_VERSION = '2025-06-25-v3-mentions' // 数据版本号
+const PENDING_STORAGE_KEY = 'multiagent_pending_tasks'
+const CURRENT_DATA_VERSION = '2026-09-16-v8-complete-mock-responses'
+const DEFAULT_MOCK_TEAM_IDS = new Set(['team-001', 'team-002', 'team-003', 'team-004', 'team-005'])
+const isMockOnlyHistory = (items) => Array.isArray(items) && items.length > 0 && items.every(item =>
+  String(item?.id || '').startsWith('mock-v6-')
+)
 
 // 全局消息状态（所有组件共享）
 const messages = ref([])
 const isProcessing = ref(false)
-const activeAgent = ref(null)
+// 并行执行的多个智能体同时处于活跃状态，用数组支持多高亮
+const activeAgent = ref([])
+// 当前广播任务的投标状态（agentId → { bidding, percent }），右栏成员徽标消费
+const agentBids = ref({})
+// 当前广播任务的协议阶段（announce/bid/execute/review/done），输入框上方进度带消费；null=无进行中任务
+const protocolPhase = ref(null)
 const logs = ref([])
 const currentTeamId = ref(null)
+const pendingTask = ref(null)
+const resultNavigation = ref(null)
+const teamPendingTasks = new Map()
 
 // 存储每个团队的消息和日志
 const teamMessages = new Map()
@@ -64,22 +80,27 @@ const teamLogs = new Map()
 const loadFromStorage = () => {
   try {
     const storedVersion = localStorage.getItem(DATA_VERSION_KEY)
+    const shouldRefreshDefaultExamples = storedVersion !== CURRENT_DATA_VERSION
+    const refreshableMockTeamIds = new Set()
 
-    // 如果版本不匹配，清除旧数据
-    if (storedVersion !== CURRENT_DATA_VERSION) {
-      console.log('数据版本更新，清除缓存')
-      localStorage.removeItem(MESSAGES_STORAGE_KEY)
-      localStorage.removeItem(LOGS_STORAGE_KEY)
+    // 仅替换完全由预置示例组成的默认团队历史；用户创建或参与过的内容始终保留。
+    if (shouldRefreshDefaultExamples) {
       localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION)
-      return
     }
 
     const storedMessages = localStorage.getItem(MESSAGES_STORAGE_KEY)
     const storedLogs = localStorage.getItem(LOGS_STORAGE_KEY)
+    const storedPending = localStorage.getItem(PENDING_STORAGE_KEY)
+    if (storedPending) Object.entries(JSON.parse(storedPending)).forEach(([id, task]) => teamPendingTasks.set(id, task))
 
     if (storedMessages) {
       const parsed = JSON.parse(storedMessages)
       Object.entries(parsed).forEach(([teamId, msgs]) => {
+        if (shouldRefreshDefaultExamples && DEFAULT_MOCK_TEAM_IDS.has(teamId) && isMockOnlyHistory(msgs)) {
+          refreshableMockTeamIds.add(teamId)
+          teamMessages.set(teamId, [...(MOCK_MESSAGES[teamId] || [])])
+          return
+        }
         teamMessages.set(teamId, msgs)
       })
     }
@@ -87,9 +108,16 @@ const loadFromStorage = () => {
     if (storedLogs) {
       const parsed = JSON.parse(storedLogs)
       Object.entries(parsed).forEach(([teamId, logEntries]) => {
+        if (refreshableMockTeamIds.has(teamId)) {
+          teamLogs.set(teamId, [...(MOCK_LOGS[teamId] || [])])
+          return
+        }
         teamLogs.set(teamId, logEntries)
       })
     }
+
+    // 让升级后的预置示例成为下一次刷新的缓存来源，避免重新读回旧版本。
+    if (refreshableMockTeamIds.size) saveToStorage()
   } catch (error) {
     console.error('加载聊天数据失败:', error)
   }
@@ -103,6 +131,7 @@ const saveToStorage = () => {
 
     localStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messagesObj))
     localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(logsObj))
+    localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(Object.fromEntries(teamPendingTasks)))
   } catch (error) {
     console.error('保存聊天数据失败:', error)
   }
@@ -374,6 +403,7 @@ const generateStructuredResponse = (agent, userMessage) => {
 export function useChat() {
   // 设置当前团队 ID
   const setTeam = (teamId) => {
+    if (isProcessing.value && currentTeamId.value !== teamId) return false
     // 先保存当前团队的数据
     if (currentTeamId.value && currentTeamId.value !== teamId) {
       saveTeamData(currentTeamId.value)
@@ -381,6 +411,9 @@ export function useChat() {
 
     currentTeamId.value = teamId
     loadTeamData(teamId)
+    pendingTask.value = teamPendingTasks.get(teamId) || null
+    // 切换团队后清空投标徽标（属于上个团队的协作过程）
+    agentBids.value = {}
   }
 
   // 添加日志
@@ -408,24 +441,36 @@ export function useChat() {
   }
 
   // 关键词匹配响应函数
+  const asTemplateExample = (response) => ({
+    templateExample: true,
+    responseType: RESPONSE_TYPES.COMPOSITE,
+    data: { items: [
+      { type: RESPONSE_TYPES.TEXT, data: { content: '前端模板示例：以下内容为预置素材，未调用模型、检索资料或执行代码，不代表针对本轮任务生成的结论。' } },
+      { type: response.responseType, data: JSON.parse(JSON.stringify(response.data)) }
+    ] }
+  })
+
   const matchResponse = (agent, userMessage) => {
     const responseType = iconToResponseMap[agent.icon] || 'chat'
+    if (agent.icon === 'chart') {
+      return createDemoDelivery(userMessage, { name: '数据分析', capability: 'analysis' }, [])
+    }
     const agentResponses = KEYWORD_RESPONSES[responseType]
 
     if (!agentResponses) {
       // 如果没有匹配的关键词响应，使用默认响应
-      return DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code
+      return asTemplateExample(DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code)
     }
 
     for (const item of agentResponses) {
       if (item.keywords.some(k => userMessage.toLowerCase().includes(k))) {
         // 深拷贝避免修改原数据
-        return JSON.parse(JSON.stringify(item.response))
+        return asTemplateExample(item.response)
       }
     }
 
     // 如果没有匹配的关键词，返回默认响应
-    return DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code
+    return asTemplateExample(DEFAULT_RESPONSES[responseType] || DEFAULT_RESPONSES.code)
   }
 
   // 计算文本的打字时间估算
@@ -456,7 +501,7 @@ export function useChat() {
   }
 
   // 模拟 Agent 响应
-  const simulateAgentResponse = async (agent, userMessage) => {
+  const simulateAgentResponse = async (agent, userMessage, execution) => {
     // 模拟每个 Agent 的思考时间
     const thinkTime = 800 + Math.random() * 1500
     await new Promise(resolve => setTimeout(resolve, thinkTime))
@@ -465,7 +510,14 @@ export function useChat() {
     addLog(agent.name, '开始处理任务...')
 
     // 使用关键词匹配生成响应
-    const response = matchResponse(agent, userMessage)
+    if (execution?.step.key === 'technical' && /生成代码|实现代码|编写代码/.test(userMessage) && execution.upstream.some(o => o.artifact?.pages?.length)) {
+      execution = { ...execution, step: { ...execution.step, key: 'implementation', name: '实现方案' } }
+    }
+    const response = execution
+      ? execution.step.key === 'technical'
+        ? { ...matchResponse(agent, userMessage), deliveryStatus: 'needs_info', artifact: { body: '已提供技术参考。请补充具体代码、错误信息与运行环境，尚未验证或执行修复。' } }
+        : createDemoDelivery(userMessage, execution.step, execution.upstream)
+      : matchResponse(agent, userMessage)
 
     // 添加完成日志
     addLog(agent.name, '任务处理完成')
@@ -484,13 +536,65 @@ export function useChat() {
     }
   }
 
+  // 单个智能体的执行回合：占位 → 思考 → 回复，独立维护自己的活跃状态
+  // （并行时每个智能体各自调用，互不阻塞；transform 供打回修订时改写产出）
+  const runAgentTurn = async (agent, content, { transform, execution } = {}) => {
+    if (!activeAgent.value.includes(agent.id)) {
+      activeAgent.value.push(agent.id)
+    }
+
+    const processingId = generateId()
+    messages.value.push({
+      id: processingId,
+      type: 'agent',
+      agentId: agent.id,
+      agentName: agent.name,
+      agentColor: agent.color,
+      agentIcon: agent.icon,
+      content: `${agent.name} 正在思考...`,
+      timestamp: formatTime(),
+      isProcessing: true
+    })
+
+    try {
+      let agentMessage = await simulateAgentResponse(agent, content, execution)
+      if (transform) {
+        agentMessage = transform(agentMessage)
+      }
+
+      // 移除处理中消息
+      const processingIndex = messages.value.findIndex(m => m.id === processingId)
+      if (processingIndex !== -1) {
+        messages.value.splice(processingIndex, 1)
+      }
+
+      // 添加 Agent 的回复 - 防止重复
+      if (!messages.value.find(m => m.id === agentMessage.id)) {
+        messages.value.push(agentMessage)
+      }
+      return agentMessage
+    } catch (err) {
+      console.error('Agent 处理失败:', agent.name, err)
+      const processingIndex = messages.value.findIndex(m => m.id === processingId)
+      if (processingIndex !== -1) {
+        messages.value.splice(processingIndex, 1)
+      }
+      return null
+    } finally {
+      activeAgent.value = activeAgent.value.filter(id => id !== agent.id)
+    }
+  }
+
   // 发送消息
-  const sendMessage = async (content, agents = []) => {
+  // mode='auto'：规则拆解 → 能力检查 → 依赖接力 → 汇总交付
+  // mode='direct'：@指派路径，人类决策权直通，按传入顺序串行直答，不进协作环
+  const sendMessage = async (content, agents = [], { mode = 'auto', confirmed = false, resume = false } = {}) => {
     if (!content || !content.trim() || isProcessing.value) {
       return null
     }
 
     isProcessing.value = true
+    const context = resume && pendingTask.value?.context || resolveFollowup(content, messages.value)
 
     // 添加用户消息
     const userMessageId = generateId()
@@ -502,15 +606,15 @@ export function useChat() {
     }
 
     // 防止重复：检查是否已存在相同ID的消息
-    if (!messages.value.find(m => m.id === userMessageId)) {
+    if (!resume && !messages.value.find(m => m.id === userMessageId)) {
       messages.value.push(userMessage)
     }
 
     // 添加用户操作日志
-    addLog('用户', `发送消息: "${content.trim()}"`)
+    addLog('用户', resume ? '继续原任务' : `发送消息: "${content.trim()}"`)
 
     // 如果没有 Agent，返回提示
-    if (!agents || agents.length === 0) {
+    if (mode === 'direct' && (!agents || agents.length === 0)) {
       addLog('system', '提示：没有匹配的 Agent')
       const noAgentId = generateId()
       const noAgentMessage = {
@@ -524,76 +628,160 @@ export function useChat() {
         messages.value.push(noAgentMessage)
       }
       isProcessing.value = false
+      saveTeamData(currentTeamId.value)
       return noAgentMessage
     }
 
-    // 添加系统日志
-    const agentNames = agents.map(a => a.name).join(', ')
-    addLog('system', `任务分配给: ${agentNames}`)
-
-    // 按顺序让每个 Agent 处理并回复
     const agentMessages = []
-    const totalAgents = agents.length
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i]
 
-      // 设置当前活跃 Agent
-      activeAgent.value = agent.id
+    try {
+      if (mode === 'auto') {
+        const followupIntent = identifyTask(content)
+        const intent = context.followup && followupIntent.needsClarification
+          ? context.upstream.map(o => ({ requirements: '需求', design: '设计', implementation: '实现', writing: '整理文档' }[o.key] || '')).join('、')
+          : content
+        const codeContinuation = context.followup && /生成代码|实现代码|编写代码/.test(content) && context.upstream.some(o => o.artifact?.pages?.length)
+        const board = planCollaboration(context.task, agents, codeContinuation ? '代码' : intent)
+        if (codeContinuation) board.steps.forEach(s => {
+          if (s.key === 'technical') { s.key = 'implementation'; s.name = '实现方案' }
+        })
+        agentBids.value = {}
+        const pushSystem = (text, type = 'endline') => messages.value.push({
+          id: generateId(), type, content: text, timestamp: formatTime(), isNew: false
+        })
+        if (board.needsClarification || context.missingContext) {
+          pushSystem(context.missingContext ? '没有可引用的上一轮交付，请说明任务对象和具体要求。' : '待补充信息：请说明希望完成的动作和交付，例如“调研竞品”“设计页面”或“开发应用”。', 'notice')
+          addLog('system', '任务意图不明确，等待补充信息')
+          return []
+        }
+        const previousBoard = resume ? [...messages.value].reverse().find(m => m.type === 'decomp') : null
+        if (previousBoard) {
+          previousBoard.subtasks = board.steps
+        } else {
+          messages.value.push({ id: generateId(), type: 'decomp', subtasks: board.steps, timestamp: formatTime(), isNew: false })
+        }
+        const planMessage = previousBoard || messages.value[messages.value.length - 1]
+        planMessage.planStatus = 'planned'
+        const updateStep = (key, status, resultId) => {
+          const item = planMessage.subtasks.find(s => s.key === key)
+          if (!item) return
+          item.status = status
+          if (resultId) item.resultId = resultId
+        }
+        protocolPhase.value = 'bid'
+        for (const agent of agents) {
+          const assigned = board.steps.filter(s => s.agent?.id === agent.id)
+          agentBids.value[agent.id] = { bidding: assigned.length > 0 }
+          addLog(agent.name, assigned.length ? `能力匹配：${assigned.map(s => s.name).join('、')}` : '能力不匹配，未参与')
+        }
+        if (board.missing.length && !confirmed) {
+          planMessage.planStatus = 'awaiting_choice'
+          pendingTask.value = { content, context, plan: board, teamId: currentTeamId.value, planId: planMessage.id }
+          teamPendingTasks.set(currentTeamId.value, pendingTask.value)
+          addLog('system', `执行前能力检查：缺少${board.missing.map(s => s.capabilityLabel).join('、')}，等待用户选择`)
+          return []
+        }
+        pendingTask.value = null
+        teamPendingTasks.delete(currentTeamId.value)
+        const outputs = [...context.upstream]
+        const outcomes = new Map()
+        protocolPhase.value = 'execute'
+        planMessage.planStatus = 'running'
+        for (const s of board.steps) {
+          if (!s.agent) { outcomes.set(s.key, 'uncovered'); continue }
+          if (s.dependencies.some(key => outcomes.get(key) !== 'completed')) {
+            outcomes.set(s.key, 'blocked')
+            updateStep(s.key, 'blocked')
+            addLog(s.agent.name, `${s.name}等待上游有效交付`)
+            continue
+          }
+          addLog(s.agent.name, `执行「${s.name}」`)
+          const upstream = latestDeliveries(outputs.filter(o => s.dependencies.includes(o.key) || context.upstream.includes(o)))
+          updateStep(s.key, 'running')
+          const result = await runAgentTurn(s.agent, context.task, { execution: { step: s, upstream } })
+          if (result) { result.taskKey = s.key; result.taskName = s.name }
+          const status = result?.deliveryStatus || 'failed'
+          outcomes.set(s.key, status)
+          updateStep(s.key, status, result?.id)
+          if (result) {
+            outputs.push({ key: s.key, agent: s.agent, message: result, artifact: result.artifact, subtask: s.name })
+            agentMessages.push(result)
+            await sleep(Math.min(estimateTypingTime(result), 8000))
+          }
+        }
+        const remaining = board.steps.filter(s => outcomes.get(s.key) !== 'completed')
+        const failed = board.steps.some(s => outcomes.get(s.key) === 'failed')
+        const needsInfo = board.steps.some(s => outcomes.get(s.key) === 'needs_info')
+        planMessage.planStatus = failed ? 'failed' : needsInfo ? 'needs_info' : remaining.length ? 'partial' : 'completed'
+        const status = failed ? '执行失败' : needsInfo ? '待补充信息' : remaining.length ? '部分完成' : '协作完成'
+        addLog('system', status)
+        protocolPhase.value = 'done'
+        await sleep(900)
+      } else {
+        // ===== @指派：人类决策权直通，不进协作环，保持原有串行行为 =====
+        const agentNames = agents.map(a => a.name).join(', ')
+        addLog('system', `任务指派给: ${agentNames}`)
 
-      // 添加处理中状态
-      const processingId = generateId()
-      const processingMessage = {
-        id: processingId,
-        type: 'agent',
-        agentId: agent.id,
-        agentName: agent.name,
-        agentColor: agent.color,
-        agentIcon: agent.icon,
-        content: `${agent.name} 正在思考...`,
-        timestamp: formatTime(),
-        isProcessing: true
+        for (let i = 0; i < agents.length; i++) {
+          const directedPlan = context.followup ? planCollaboration(context.task, [agents[i]], content) : null
+          const ownSteps = directedPlan?.steps.filter(s => s.agent)
+          const selected = ownSteps?.at(-1) || (context.followup && identifyTask(content).needsClarification ? planCollaboration(context.task, [agents[i]], { rocket: '需求', palette: '设计', code: '实现', document: '整理文档' }[agents[i].icon] || '').steps.find(s => s.agent) : null)
+          if (context.missingContext || (context.followup && !selected)) {
+            messages.value.push({ id: generateId(), type: 'notice', content: context.missingContext ? '没有可引用的上一轮交付，请说明具体任务。' : `${agents[i].name}无法匹配本轮要求，请调整指派或补充具体要求。`, timestamp: formatTime() })
+            continue
+          }
+          if (selected?.key === 'technical') { selected.key = 'implementation'; selected.name = '实现方案' }
+          const agentMessage = await runAgentTurn(agents[i], context.task, selected ? { execution: { step: selected, upstream: latestDeliveries(context.upstream) } } : {})
+          if (agentMessage && selected) { agentMessage.taskKey = selected.key; agentMessage.taskName = selected.name }
+          if (agentMessage) {
+            agentMessages.push(agentMessage)
+          }
+          // 多 Agent 场景下：等待打字效果完成后再进行下一个
+          if (agentMessage && agents.length > 1 && i < agents.length - 1) {
+            const typingTime = estimateTypingTime(agentMessage)
+            await new Promise(resolve => setTimeout(resolve, typingTime))
+          }
+        }
       }
-      messages.value.push(processingMessage)
-
-      // 模拟 Agent 处理
-      const agentMessage = await simulateAgentResponse(agent, content)
-
-      // 移除处理中消息
-      const processingIndex = messages.value.findIndex(m => m.id === processingId)
-      if (processingIndex !== -1) {
-        messages.value.splice(processingIndex, 1)
+    } finally {
+      if (mode === 'direct') {
+        // 直通路径没有协议收尾日志，保留这条完成提示
+        addLog('system', '指定成员响应结束')
       }
 
-      // 添加 Agent 的回复 - 防止重复
-      if (!messages.value.find(m => m.id === agentMessage.id)) {
-        messages.value.push(agentMessage)
-      }
-      agentMessages.push(agentMessage)
+      // 清除活跃状态
+      activeAgent.value = []
+      protocolPhase.value = null
+      isProcessing.value = false
 
-      // 多 Agent 场景下：等待打字效果完成后再进行下一个
-      // 根据响应内容长度计算实际的打字时间
-      if (totalAgents > 1 && i < agents.length - 1) {
-        const typingTime = estimateTypingTime(agentMessage)
-        await new Promise(resolve => setTimeout(resolve, typingTime))
-      }
+      // 保存更新后的数据
+      saveTeamData(currentTeamId.value)
     }
-
-    // 添加协同完成日志
-    addLog('system', '所有 Agent 已完成任务')
-
-    // 清除活跃状态
-    activeAgent.value = null
-    isProcessing.value = false
-
-    // 保存更新后的数据
-    saveTeamData(currentTeamId.value)
 
     // 返回所有 Agent 的消息
     return agentMessages
   }
 
   // 清空消息
+  const dismissPendingTask = () => {
+    const plan = pendingTask.value && messages.value.find(m => m.id === pendingTask.value.planId)
+    if (plan) {
+      plan.planStatus = 'cancelled'
+      plan.subtasks.forEach(s => { if (s.status === 'ready') s.status = 'cancelled' })
+    }
+    pendingTask.value = null
+    teamPendingTasks.delete(currentTeamId.value)
+    saveToStorage()
+  }
+
+  const resumePendingTask = (agents, { allowPartial = false } = {}) => {
+    const task = pendingTask.value
+    if (!task || task.teamId !== currentTeamId.value) return
+    return sendMessage(task.content, agents, { mode: 'auto', confirmed: allowPartial, resume: true })
+  }
+
   const clearMessages = () => {
+    dismissPendingTask()
     messages.value = []
     addLog('system', '清空聊天记录')
     saveTeamData(currentTeamId.value)
@@ -615,10 +803,17 @@ export function useChat() {
     clearMessages,
     isProcessing,
     activeAgent,
+    agentBids,
+    protocolPhase,
     getLogs,
     clearLogs,
     addLog,
     setTeam,
-    currentTeamId
+    currentTeamId,
+    pendingTask,
+    resultNavigation,
+    requestResult: id => { resultNavigation.value = { id, time: Date.now() } },
+    dismissPendingTask,
+    resumePendingTask
   }
 }

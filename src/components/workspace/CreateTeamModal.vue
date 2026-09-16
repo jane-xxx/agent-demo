@@ -16,12 +16,12 @@
       <!-- Agent Selection -->
       <div class="form-group">
         <div class="form-header">
-          <label class="form-label">选择Agent</label>
+          <label class="form-label">选择智能体</label>
           <div class="selected-count" v-if="selectedCount > 0">
-            已选择 {{ selectedCount }} 个 Agent
+            已选择 {{ selectedCount }} 个智能体
           </div>
           <div class="selected-count empty" v-else>
-            请至少选择一个 Agent
+            请至少选择一个智能体
           </div>
         </div>
       </div>

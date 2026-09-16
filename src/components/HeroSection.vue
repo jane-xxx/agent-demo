@@ -1,7 +1,7 @@
 <template>
   <section class="hero-section">
-    <h1 class="hero-title">选择你的 <b>Agent</b> 团队</h1>
-    <p class="hero-subtitle">从丰富的 Agent 中选择适合你任务的 AI 成员，组建你的专属团队</p>
+    <h1 class="hero-title">选择你的 <b>智能体</b> 团队</h1>
+    <p class="hero-subtitle">从丰富的智能体中选择适合你任务的 AI 成员，组建你的专属团队</p>
   </section>
 </template>
 

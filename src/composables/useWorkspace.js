@@ -2,9 +2,37 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAgentSelection } from './useAgentSelection'
 import { MOCK_TEAMS } from '../utils/mockData'
+import { useChat } from './useChat'
 
 // LocalStorage key
 const TEAMS_STORAGE_KEY = 'multiagent_teams'
+let teamSequence = 0
+
+// 历史数据迁移：智能体名已中文化，把旧英文名映射为中文名（保留用户自建团队）
+const AGENT_NAME_MIGRATION = {
+  'Chat Agent': '对话智能体',
+  'Research Agent': '调研智能体',
+  'Writing Agent': '写作智能体',
+  'Code Agent': '代码智能体',
+  'Data Analyst Agent': '数据分析智能体',
+  'Design Agent': '设计智能体',
+  'Strategy Agent': '战略智能体',
+  'Product Agent': '产品智能体'
+}
+
+const migrateTeams = (teams) => {
+  teams.forEach(team => {
+    (team.agents || []).forEach(agent => {
+      if (AGENT_NAME_MIGRATION[agent.name]) {
+        agent.name = AGENT_NAME_MIGRATION[agent.name]
+      }
+    })
+    if (team.description) {
+      team.description = team.description.replace(/个 Agent 组成/, '个智能体组成')
+    }
+  })
+  return teams
+}
 
 // 从 localStorage 加载团队数据
 const loadTeamsFromStorage = () => {
@@ -15,8 +43,8 @@ const loadTeamsFromStorage = () => {
       const parsed = JSON.parse(stored)
       console.log('解析后的团队数量:', parsed?.length)
       // 如果有存储的数据，使用存储的数据
-      if (parsed && parsed.length > 0) {
-        return parsed
+      if (Array.isArray(parsed)) {
+        return migrateTeams(parsed)
       }
     }
   } catch (error) {
@@ -44,6 +72,18 @@ const teams = ref(loadTeamsFromStorage())
 const searchQuery = ref('')
 
 export function useWorkspace() {
+  const addTeamAgents = (teamId, members) => {
+    const team = teams.value.find(t => String(t.id) === String(teamId))
+    if (!team) return
+    const seen = new Set((team.agents || []).map(a => a.id))
+    team.agents = [...(team.agents || []), ...members.filter(a => {
+      if (seen.has(a.id)) return false
+      seen.add(a.id)
+      return true
+    })]
+    team.memberCount = team.agents.length
+    saveTeamsToStorage(teams.value)
+  }
   const router = useRouter()
   const { currentTeam } = useAgentSelection()
 
@@ -98,8 +138,31 @@ export function useWorkspace() {
     saveTeamsToStorage(teams.value)
   }
 
+  // 创建团队（统一入口：团队字段构造只写这一份，首页/工作台共用）
+  const createTeam = ({ name, agents }) => {
+    const teamId = `team-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${++teamSequence}-${Math.random().toString(36).slice(2)}`}`
+    const members = (agents || []).map(agent => ({
+      ...agent,
+      status: agent.status || 'online'
+    }))
+    const newTeam = {
+      id: teamId,
+      name,
+      subtitle: '刚刚',
+      memberCount: members.length,
+      color: 'linear-gradient(135deg, #6c5ce7, #a855f7)',
+      createdAt: new Date().toISOString(),
+      lastActivity: '刚刚',
+      description: `由 ${members.length} 个智能体组成的团队`,
+      agents: members
+    }
+    addTeam(newTeam)
+    return newTeam
+  }
+
   // 删除团队
   const deleteTeam = (teamId) => {
+    if (useChat().isProcessing.value) return false
     console.log('删除团队:', teamId)
     const index = teams.value.findIndex(t => t.id === teamId)
     if (index !== -1) {
@@ -188,9 +251,11 @@ export function useWorkspace() {
     searchQuery,
     filteredTeams,
     addTeam,
+    createTeam,
     deleteTeam,
     renameTeam,
     switchTeam,
+    addTeamAgents,
     updateAgentStatus,
     removeAgent,
     clearAllTeams,

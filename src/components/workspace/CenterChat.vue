@@ -11,7 +11,7 @@
         </svg>
       </div>
       <h3 class="empty-title">还没有团队</h3>
-      <p class="empty-text">创建一个团队并选择 Agent，开始协作</p>
+      <p class="empty-text">创建一个团队并选择智能体，开始协作</p>
       <button @click="openCreateTeamModal" class="create-team-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
@@ -28,7 +28,7 @@
             {{ currentTeam?.name || '未命名团队' }}
           </h2>
           <div class="team-meta">
-            <span class="agent-count">{{ currentTeam?.agents?.length || 0 }} 个 Agent</span>
+            <span class="agent-count">{{ currentTeam?.agents?.length || 0 }} 个智能体</span>
             <span class="create-time">创建于 {{ formatDate(currentTeam?.createdAt) }}</span>
           </div>
         </div>
@@ -54,21 +54,33 @@
             </svg>
           </div>
           <h3 class="welcome-title">欢迎使用 {{ currentTeam?.name || 'MultiAgent' }}</h3>
-          <p class="welcome-text">您已成功创建团队，包含 {{ currentTeam?.agents?.length || 0 }} 个 Agent</p>
+          <p class="welcome-text">您已成功创建团队，包含 {{ currentTeam?.agents?.length || 0 }} 个智能体</p>
           <p class="welcome-hint">在下方输入框中输入任务，开始与您的 AI 团队协作</p>
         </div>
 
         <!-- Message list -->
         <template v-else>
-          <div
-            v-for="message in messages"
-            :key="message.id"
-            class="message"
-            :class="[
-              message.type === 'user' ? 'user-message' : 'agent-message',
-              { 'message-with-image': message.responseType === 'image' }
-            ]"
-          >
+          <template v-for="message in displayMessages" :key="message.id">
+            <!-- 协作轻语：智能体的单句表态（认领 / 退回 / 验收） -->
+            <div v-if="message.type === 'whisper'" class="whisper" :class="`tone-${message.tone}`">
+              <div class="whisper-avatar" :style="{ background: message.agentColor }">
+                <component :is="getAgentIcon(message.agentIcon)" />
+              </div>
+              <span class="whisper-name">{{ message.agentName }}</span>
+              <span class="whisper-text">{{ message.text }}</span>
+              <span v-if="message.chip" class="whisper-chip">{{ message.chip }}</span>
+            </div>
+
+
+            <div
+              v-else
+              class="message"
+              :data-message-id="message.id"
+              :class="[
+                message.type === 'user' ? 'user-message' : 'agent-message',
+                { 'message-with-image': message.responseType === 'image' }
+              ]"
+            >
             <div
               class="message-avatar"
               :class="{ 'agent-logo': message.type === 'agent', 'user-logo': message.type === 'user' }"
@@ -98,6 +110,7 @@
                 </template>
               </div>
               <div class="message-text" :class="{ 'processing': message.isProcessing, 'message-text-with-image': message.responseType === 'image' }">
+                <p v-if="message.type === 'agent' && message.responseType && !message.artifact && !message.templateExample && !message.isProcessing" class="template-hint">历史预置素材，非本轮真实生成或执行结果。</p>
                 <ResponseRenderer
                   v-if="!message.isProcessing && message.responseType"
                   :key="message.id"
@@ -112,6 +125,7 @@
               </div>
             </div>
           </div>
+          </template>
         </template>
       </div>
 
@@ -130,6 +144,24 @@
         </button>
       </transition>
 
+      <!-- 任务运行时的瞬时进度带（结束后淡出，不留在聊天流） -->
+      <div v-if="pendingTask" class="coverage-panel" role="status">
+        <strong>{{ pendingTask.plan.runnable.length ? '当前团队只能覆盖部分任务' : '当前团队暂时无法执行这项任务' }}</strong>
+        <p>缺少：{{ pendingTask.plan.missing.map(s => s.name + '（' + s.capabilityLabel + '）').join('、') }}。</p>
+        <p v-if="pendingTask.plan.runnable.length">可先完成：{{ pendingTask.plan.runnable.map(s => s.name).join('、') }}。依赖缺失交付的步骤将暂停。</p>
+        <div v-if="suggestedMembers.length" class="coverage-members">
+          <label v-for="agent in suggestedMembers" :key="agent.id">
+            <input type="checkbox" v-model="selectedSupplementIds" :value="agent.id" />
+            {{ agent.name }}
+          </label>
+        </div>
+        <div class="coverage-actions">
+          <button v-if="suggestedMembers.length" @click="supplementAndResume" :disabled="!selectedSupplementIds.length || chatProcessing">补充所选成员并继续</button>
+          <button v-if="pendingTask.plan.runnable.length" @click="resumePendingTask(currentTeam?.agents || [], { allowPartial: true })" :disabled="chatProcessing">仅执行可完成部分</button>
+          <button @click="editPendingTask" :disabled="chatProcessing">修改任务</button>
+        </div>
+      </div>
+
       <div class="chat-input-bar">
         <div class="input-wrapper">
           <textarea
@@ -137,7 +169,7 @@
             v-model="inputText"
             @keydown="handleKeydown"
             @input="handleInput"
-            placeholder="输入你的任务或问题。使用 @ 可指定特定 Agent 回答，不指定则所有 Agent 协作"
+            placeholder="输入任务，团队将按能力分工；使用 @ 可指定成员直接回答"
             class="chat-input"
             rows="3"
             :disabled="chatProcessing"
@@ -191,7 +223,8 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, watch, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
+import { recommendedAgents, parseAgentMentions } from '../../utils/collaboration.js'
 import { useChat } from '../../composables/useChat'
 import { useAgentSelection } from '../../composables/useAgentSelection'
 import { useWorkspace } from '../../composables/useWorkspace'
@@ -209,9 +242,13 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
-const { currentTeam: createdTeam } = useAgentSelection()
-const { teams } = useWorkspace()
-const { messages, sendMessage, isProcessing: chatProcessing, setTeam } = useChat()
+const { currentTeam: createdTeam, AGENTS, getCategoryColor } = useAgentSelection()
+const { teams, addTeamAgents } = useWorkspace()
+const { messages, sendMessage, isProcessing: chatProcessing, setTeam, pendingTask, dismissPendingTask, resumePendingTask, resultNavigation } = useChat()
+// 主对话区仅保留回复与必要提示；协作状态在右侧展示，原始历史保留。
+const displayMessages = computed(() => messages.value.filter(m =>
+  !['decomp', 'whisper', 'delivery', 'endline'].includes(m.type) && m.agentName !== '任务汇总'
+))
 const { openCreateTeamModal } = useModal()
 
 // 获取当前路由中的团队，如果没有则使用创建的团队
@@ -237,7 +274,33 @@ const currentTeam = computed(() => {
 const teamId = computed(() => route.params.teamId)
 
 const inputText = ref('')
+// 不使用筛选中的列表作为能力推荐来源。
+const allAvailableAgents = computed(() => {
+  return AGENTS.map(agent => ({ ...agent, color: getCategoryColor(agent.category) }))
+})
+const selectedSupplementIds = ref([])
+const suggestedMembers = computed(() => pendingTask.value ? recommendedAgents(pendingTask.value.plan, allAvailableAgents.value).filter(a => !(currentTeam.value?.agents || []).some(m => m.id === a.id)) : [])
+watch(pendingTask, () => { selectedSupplementIds.value = [] })
+const supplementAndResume = async () => {
+  const members = suggestedMembers.value.filter(a => selectedSupplementIds.value.includes(a.id))
+  if (!members.length || !pendingTask.value) return
+  addTeamAgents(pendingTask.value.teamId, members)
+  await resumePendingTask(currentTeam.value?.agents || [])
+}
+const editPendingTask = () => {
+  inputText.value = pendingTask.value?.content || ''
+  dismissPendingTask()
+  nextTick(() => chatInput.value?.focus())
+}
+// 执行中保留任务所属工作区，避免异步回复写进另一个团队。
+onBeforeRouteLeave(() => !chatProcessing.value)
+onBeforeRouteUpdate(() => !chatProcessing.value)
 const chatContent = ref(null)
+const viewTaskResult = id => {
+  const element = [...(chatContent.value?.querySelectorAll('[data-message-id]') || [])].find(el => el.dataset.messageId === String(id))
+  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+watch(resultNavigation, request => { if (request) nextTick(() => viewTaskResult(request.id)) })
 const chatInput = ref(null) // 聊天输入框引用
 const atButton = ref(null) // @ 按钮引用
 const mentionFromInput = ref(false) // 标记是否来自输入框的@
@@ -266,17 +329,12 @@ const formatDate = (dateString) => {
 
 // 解析输入文本中的 @mentions
 const parseMentions = (text) => {
-  const mentionRegex = /@(\S+)/g
-  const mentions = []
-  let match
-  while ((match = mentionRegex.exec(text)) !== null) {
-    mentions.push(match[1])
-  }
-  return mentions
+  return parseAgentMentions(text)
 }
 
 const handleSend = async () => {
   if (!inputText.value.trim() || chatProcessing.value) return
+  dismissPendingTask()
 
   try {
     // 获取当前团队的 agents
@@ -293,9 +351,12 @@ const handleSend = async () => {
       )
     }
 
-    const sendPromise = sendMessage(inputText.value, respondingAgents)
+    // 无 @提及 → 团队自主协作（合同网：挂板/投标/验收）；@提及 → 人类指派直通，不进协作环
+    const sendPromise = sendMessage(inputText.value, respondingAgents, { mode: mentions.length > 0 ? 'direct' : 'auto' })
 
     inputText.value = ''
+    mentionPickerOpen.value = false
+    mentionFromInput.value = false
 
     // 立即滚动，让用户看到自己的消息
     nextTick(() => {
@@ -631,14 +692,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.coverage-panel { margin: 8px 14px; padding: 12px 16px; border: 1px solid #8b713d; border-radius: 12px; background: #242017; color: #f4deb0; max-height: 260px; overflow-y: auto; flex-shrink: 0; }
+.coverage-panel p { margin: 8px 0; font-size: 13px; }
+.coverage-members, .coverage-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.coverage-members label { font-size: 13px; display: flex; align-items: center; gap: 5px; }
+.coverage-actions button { padding: 7px 12px; border: 1px solid #857047; border-radius: 7px; background: #363023; color: #f4deb0; cursor: pointer; }
+.coverage-actions button:disabled { opacity: .45; cursor: default; }
 .center-chat {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: #0f141f;
   overflow: hidden;
   position: relative;
 }
+.template-hint { font-size: 12px; color: #aab3c6; margin-bottom: 10px; }
 
 /* Empty state */
 .empty-state {
@@ -813,6 +882,131 @@ onMounted(() => {
   gap: 18px;
   overflow-anchor: none;
   position: relative;
+}
+
+
+/* 协作轻语：智能体的单句表态——小头像、单行、无气泡背景，视觉重量远低于正式回复 */
+.whisper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  max-width: 88%;
+  margin: -4px 0;
+  padding: 2px 4px;
+}
+
+.whisper-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.whisper-avatar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+}
+
+.whisper-avatar svg {
+  width: 11px;
+  height: 11px;
+  stroke: white;
+  position: relative;
+  z-index: 1;
+}
+
+.whisper-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.whisper-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.whisper-chip {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+
+/* 拆解线：后台拆解结果的居中展示（子任务板可见，拆解者无脸） */
+.decomp-line {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 78%;
+  margin: 2px 0;
+  padding: 3px 0;
+}
+
+.decomp-tag {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.decomp-steps {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 收束线：任务收尾的居中细线 */
+.endline {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 72%;
+  margin: 2px 0;
+}
+
+.endline-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.35), transparent);
+}
+
+.endline-text {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6ee7b7;
+  white-space: nowrap;
+  padding: 2px 10px;
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.06);
 }
 
 .chat-content.content-loading {

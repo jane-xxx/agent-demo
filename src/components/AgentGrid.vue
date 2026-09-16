@@ -10,7 +10,7 @@
         <circle cx="11" cy="11" r="8" />
         <path d="M21 21l-4.35-4.35" />
       </svg>
-      <p>未找到匹配的 Agent</p>
+      <p>未找到匹配的智能体</p>
     </div>
   </div>
 </template>
@@ -25,7 +25,8 @@ const { filteredAgents } = useAgentSelection()
 <style scoped>
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 宽屏保持 4 列，窄屏（笔记本/分屏）自动降为 3 列，避免横向滚动 */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 28px;
   margin-bottom: 32px;
   padding: 0 32px;
@@ -38,7 +39,7 @@ const { filteredAgents } = useAgentSelection()
   align-items: center;
   justify-content: center;
   padding: 64px 32px;
-  color: #636e72;
+  color: #9aa5b1;
 }
 
 .no-results svg {

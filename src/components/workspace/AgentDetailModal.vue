@@ -25,7 +25,7 @@
       </div>
 
       <div class="agent-section">
-        <h5 class="section-title">最近活动</h5>
+        <h5 class="section-title">活动示例（预置）</h5>
         <ul class="activity-list">
           <li v-for="(activity, index) in capabilities?.recentActivities" :key="index">
             {{ activity }}
@@ -34,7 +34,7 @@
       </div>
 
       <div class="agent-section">
-        <h5 class="section-title">统计</h5>
+        <h5 class="section-title">统计示例（非当前团队实时数据）</h5>
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label">已完成任务</span>
@@ -42,7 +42,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">在线时长</span>
-            <span class="stat-value">{{ agentTasks?.avgResponseTime || capabilities?.stats?.onlineHours || 0 }}h</span>
+            <span class="stat-value">{{ capabilities?.stats?.onlineHours != null ? `${capabilities.stats.onlineHours}h` : '暂无数据' }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">进行中</span>
@@ -56,7 +56,7 @@
       </div>
 
       <div class="agent-section" v-if="agentTasks?.tasks?.length">
-        <h5 class="section-title">最近任务</h5>
+        <h5 class="section-title">任务示例（预置）</h5>
         <ul class="task-list">
           <li v-for="task in agentTasks.tasks.slice(0, 5)" :key="task.id" class="task-item" :class="`task-${task.status}`">
             <span class="task-title">{{ task.title }}</span>

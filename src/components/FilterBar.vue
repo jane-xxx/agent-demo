@@ -5,6 +5,7 @@
         v-for="category in CATEGORIES"
         :key="category.id"
         :class="['tab-button', { active: activeCategory === category.id }]"
+        :style="{ '--category-color': category.color }"
         @click="setCategory(category.id)"
       >
         {{ category.label }}
@@ -19,9 +20,19 @@
         type="text"
         :value="searchQuery"
         @input="setSearchQuery($event.target.value)"
-        placeholder="搜索 Agent..."
+        placeholder="搜索智能体..."
         class="search-input"
       />
+      <button
+        v-if="searchQuery"
+        class="clear-btn"
+        aria-label="清除搜索"
+        @click="setSearchQuery('')"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   </div>
 </template>
@@ -57,7 +68,6 @@ const { CATEGORIES, activeCategory, searchQuery, setCategory, setSearchQuery } =
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  --category-color: #6c5ce7;
 }
 
 .tab-button:hover {
@@ -89,7 +99,7 @@ const { CATEGORIES, activeCategory, searchQuery, setCategory, setSearchQuery } =
 
 .search-input {
   width: 100%;
-  padding: 12px 16px 12px 44px;
+  padding: 12px 36px 12px 44px;
   background: rgba(30, 39, 46, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -100,7 +110,36 @@ const { CATEGORIES, activeCategory, searchQuery, setCategory, setSearchQuery } =
 }
 
 .search-input::placeholder {
-  color: #636e72;
+  color: #9aa5b1;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #9aa5b1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.clear-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+
+.clear-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .search-input:focus {

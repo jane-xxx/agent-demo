@@ -23,7 +23,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { onBeforeUnmount } from 'vue'
+
+const props = defineProps({
   isOpen: {
     type: Boolean,
     required: true
@@ -43,6 +45,13 @@ const emit = defineEmits(['close'])
 const close = () => {
   emit('close')
 }
+
+// 支持 Esc 关闭弹窗
+const onKeydown = (e) => {
+  if (e.key === 'Escape' && props.isOpen) close()
+}
+window.addEventListener('keydown', onKeydown)
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>

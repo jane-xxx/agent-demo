@@ -1,0 +1,112 @@
+import assert from 'node:assert/strict'
+import { createServer } from 'vite'
+import { createServer as createHttpServer } from 'node:http'
+import { identifyTask, planCollaboration, createDemoDelivery, latestDeliveries, parseAgentMentions } from './utils/collaboration.js'
+import { useAgentSelection } from './composables/useAgentSelection.js'
+
+const agents = useAgentSelection().filteredAgents.value
+assert.deepEqual(parseAgentMentions('写邮件给 test@example.com'), [])
+assert.deepEqual(parseAgentMentions('@代码智能体 @写作智能体 你好'), ['代码智能体', '写作智能体'])
+assert.deepEqual(parseAgentMentions('请处理，@代码智能体：生成代码'), ['代码智能体'])
+const store = new Map()
+globalThis.localStorage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) }
+const httpServer = createHttpServer()
+const server = await createServer({ configFile: false, server: { middlewareMode: true, hmr: { server: httpServer } }, appType: 'custom', optimizeDeps: { noDiscovery: true, include: [] } })
+const originalTimeout = globalThis.setTimeout
+try {
+  const { useChat } = await server.ssrLoadModule('/src/composables/useChat.js')
+  const chat = useChat()
+  // 仅加速演示动画延迟，不更改调度和交付逻辑。
+  globalThis.setTimeout = (fn, ms, ...args) => originalTimeout(fn, 0, ...args)
+  assert.deepEqual(identifyTask('不要开发APP，只写一封邮件').subtasks.map(s => s.key), ['writing'])
+  assert.deepEqual(identifyTask('分析记账APP的竞品').subtasks.map(s => s.key), ['research'])
+  assert(identifyTask('怎么做').needsClarification)
+  assert.deepEqual(identifyTask('帮我修复bug').subtasks.map(s => s.key), ['technical'])
+  chat.setTeam('test-full')
+  await chat.sendMessage('如何实现一个记账APP', agents)
+  const outputs = chat.messages.value.filter(m => m.artifact)
+  assert.deepEqual(outputs.map(m => m.agentIcon), ['rocket', 'palette', 'code'])
+  assert.deepEqual(outputs[2].artifact.pages, outputs[1].artifact.pages)
+  assert(outputs[2].data.items.some(item => item.type === 'code'))
+  assert(outputs[1].data.items.some(item => item.type === 'chart'))
+  const completedPlan = chat.messages.value.find(m => m.type === 'decomp')
+  assert.equal(completedPlan.planStatus, 'completed')
+  assert(completedPlan.subtasks.every(s => s.status === 'completed' && s.resultId))
+  assert(!chat.messages.value.some(m => m.content?.includes('个子任务已交付')))
+  assert.equal(chat.messages.value.filter(m => m.type === 'delivery').length, 0)
+  assert(!chat.messages.value.some(m => m.agentName === '任务汇总' || m.type === 'whisper'))
+
+  await chat.sendMessage('在刚才的方案中增加预算管理', agents)
+  assert(chat.messages.value.filter(m => m.artifact).at(-1).artifact.features.includes('预算管理'))
+  const revised = chat.messages.value.filter(m => m.artifact).slice(-3)
+  assert.deepEqual(revised[2].artifact.pages, revised[1].artifact.pages, '代码必须消费本轮设计而不是历史页面')
+  assert(revised[2].artifact.pages.some(p => p.feature === '预算管理'))
+  const oldDelivery = { key: 'design', artifact: { pages: ['旧页面'] }, message: { deliveryStatus: 'completed' } }
+  const newDelivery = { key: 'design', artifact: { pages: ['新页面'] }, message: { deliveryStatus: 'completed' } }
+  assert.deepEqual(latestDeliveries([oldDelivery, newDelivery]), [newDelivery])
+  assert.deepEqual(latestDeliveries([oldDelivery, { ...newDelivery, message: { deliveryStatus: 'failed' } }]), [oldDelivery], '无效交付不能覆盖有效版本')
+  await chat.sendMessage('@代码智能体 根据刚才的设计生成代码', agents.filter(a => a.icon === 'code'), { mode: 'direct' })
+  const continuation = chat.messages.value.filter(m => m.artifact).at(-1)
+  assert.equal(continuation.taskKey, 'implementation')
+  assert(continuation.artifact.features.includes('预算管理'))
+  assert(continuation.artifact.pages.length > 0)
+  chat.setTeam('test-no-context')
+  await chat.sendMessage('完善刚才的方案', agents)
+  assert.equal(chat.messages.value.at(-1).type, 'notice')
+  chat.setTeam('test-clarification')
+  await chat.sendMessage('怎么做', agents)
+  assert.equal(chat.messages.value.at(-1).type, 'notice')
+
+  chat.setTeam('test-none')
+  await chat.sendMessage('实现记账APP', agents.filter(a => a.icon === 'document'))
+  assert(chat.pendingTask.value)
+  assert.equal(chat.messages.value.find(m => m.type === 'decomp').planStatus, 'awaiting_choice')
+  assert.equal(chat.messages.value.filter(m => m.type === 'agent').length, 0)
+  assert(store.get('multiagent_pending_tasks').includes('test-none'))
+  await chat.resumePendingTask(agents.filter(a => a.icon === 'rocket'))
+  assert(chat.pendingTask.value, '补充不完整时仍需提示')
+  await chat.resumePendingTask(agents)
+  assert.equal(chat.pendingTask.value, null)
+  assert.equal(chat.messages.value.filter(m => m.type === 'user').length, 1)
+
+  chat.setTeam('test-partial')
+  await chat.sendMessage('实现记账APP', agents.filter(a => a.icon === 'rocket'))
+  assert.equal(chat.pendingTask.value.plan.runnable.length, 1)
+  await chat.resumePendingTask(agents.filter(a => a.icon === 'rocket'), { allowPartial: true })
+  assert.equal(chat.messages.value.find(m => m.type === 'decomp').planStatus, 'partial')
+  assert.equal(chat.messages.value.filter(m => m.deliveryStatus).length, 1)
+
+  chat.setTeam('test-info')
+  await chat.sendMessage('写一封邮件', agents)
+  assert.equal(chat.messages.value.find(m => m.type === 'decomp').planStatus, 'completed')
+  assert(!chat.messages.value.some(m => m.type === 'delivery'), '单步骤回复不另加交付清单')
+  chat.setTeam('test-direct')
+  await chat.sendMessage('@代码智能体 修复bug', agents.filter(a => a.icon === 'code'), { mode: 'direct' })
+  assert.equal(chat.messages.value.filter(m => m.type === 'decomp').length, 0)
+  assert(chat.messages.value.some(m => m.responseType === 'composite'))
+
+  const plan = planCollaboration('开发记账APP，功能只需收支录入', agents)
+  const requirements = createDemoDelivery(plan.task, plan.steps[0], [])
+  const design = createDemoDelivery(plan.task, plan.steps[1], [{ agent: agents.find(a => a.icon === 'rocket'), subtask: '需求梳理', artifact: requirements.artifact }])
+  assert.deepEqual(design.artifact.pages.map(p => p.feature), ['收支录入'])
+  const naturalAccounting = createDemoDelivery('如何实现一个记账APP，包含收支录入、分类统计和预算提醒', plan.steps[0], [])
+  assert.deepEqual(naturalAccounting.artifact.features, ['收支录入', '账单分类', '月度统计', '预算管理'])
+  assert(naturalAccounting.artifact.body.includes('预算提醒规则'))
+  const budgetImplementation = createDemoDelivery('记账APP 本轮要求：补充预算管理的提醒规则', { key: 'implementation', name: '实现方案', capability: 'implementation' }, [{ key: 'design', agent: { name: '设计智能体' }, subtask: '页面设计', artifact: { features: ['预算管理'], pages: [{ name: '预算管理页', feature: '预算管理' }] } }])
+  assert(budgetImplementation.artifact.fields.includes('alertLevel'))
+  assert(budgetImplementation.artifact.body.includes('超过 80%'))
+  const preservedImplementation = createDemoDelivery('记账 APP。本轮要求：@代码智能体 根据刚才的设计生成代码', { key: 'implementation', name: '实现方案', capability: 'implementation' }, [{ key: 'implementation', agent: { name: '代码智能体' }, subtask: '实现方案', artifact: budgetImplementation.artifact }])
+  assert(preservedImplementation.artifact.fields.includes('alertLevel'))
+  const custom = planCollaboration('开发APP并整理文档', [{ id: 99, capabilities: ['requirements', 'design', 'implementation', 'writing'] }])
+  assert(custom.steps.every(s => s.agent.id === 99), '同一成员可承担多个匹配子任务')
+  chat.setTeam('test-empty')
+  await chat.sendMessage('开发APP', [])
+  assert.equal(chat.pendingTask.value.plan.missing.length, 3)
+  chat.dismissPendingTask()
+  assert(!store.get('multiagent_pending_tasks').includes('test-empty'))
+  console.log('协作验证通过：任务约束、逐项匹配、暂停与恢复、依赖接力、多格式交付、准确状态和上游变化。')
+} finally {
+  globalThis.setTimeout = originalTimeout
+  await server.close()
+  httpServer.close()
+}

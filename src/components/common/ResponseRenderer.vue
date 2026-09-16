@@ -54,28 +54,28 @@
       <table>
         <thead>
           <tr>
-            <th v-for="(header, i) in data.headers" :key="i">{{ header }}</th>
+            <th v-for="(header, i) in data?.headers || []" :key="i">{{ header }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, i) in data.rows" :key="i">
+          <tr v-for="(row, i) in data?.rows || []" :key="i">
             <td v-for="(cell, j) in row" :key="j">{{ cell }}</td>
           </tr>
         </tbody>
       </table>
-      <p v-if="data.caption && data.caption.trim()" class="table-caption">{{ data.caption }}</p>
+      <p v-if="data?.caption" class="table-caption">{{ data.caption }}</p>
     </div>
 
     <!-- Chart 类型 (Mermaid) -->
     <div v-else-if="responseType === 'chart'" class="chart-response">
       <div v-html="renderedChart"></div>
-      <p v-if="data.caption && data.caption.trim()" class="chart-caption">{{ data.caption }}</p>
+      <p v-if="data?.caption" class="chart-caption">{{ data.caption }}</p>
     </div>
 
     <!-- Formula 类型 (LaTeX) -->
     <div v-else-if="responseType === 'formula'" class="formula-response">
-      <div v-for="(formula, i) in data.formulas" :key="i" class="formula-item" v-html="renderFormula(formula)"></div>
-      <p v-if="data.explanation && data.explanation.trim()" class="formula-explanation">{{ data.explanation }}</p>
+      <div v-for="(formula, i) in data?.formulas || []" :key="i" class="formula-item" v-html="renderFormula(formula)"></div>
+      <p v-if="data?.explanation" class="formula-explanation">{{ data.explanation }}</p>
     </div>
 
     <!-- Image 类型 -->
@@ -98,7 +98,7 @@
               <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
             </svg>
           </button>
-          <button @click="downloadImage" class="action-btn" title="下载图片">
+          <button @click="downloadImage" class="action-btn" :disabled="imageDownloading" :title="imageDownloading ? '下载中' : '下载图片'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -113,7 +113,7 @@
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.3"></circle>
             <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="2"></path>
           </svg>
-          <span>生成图片中...</span>
+          <span>加载图片中...</span>
         </div>
 
         <!-- 加载失败占位 -->
@@ -154,17 +154,18 @@
       <div class="lightbox-content" @click.stop>
         <img :src="data?.url" :alt="data?.alt || 'Generated image'" class="lightbox-image" />
         <div v-if="data?.caption && data.caption.trim()" class="lightbox-caption">{{ data.caption }}</div>
-        <button @click="downloadImage" class="lightbox-download">
+        <button @click="downloadImage" class="lightbox-download" :disabled="imageDownloading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          下载图片
+          {{ imageDownloading ? '下载中...' : '下载图片' }}
         </button>
       </div>
     </div>
   </transition>
+  <p v-if="imageDownloadTip" class="download-tip">{{ imageDownloadTip }}</p>
 </template>
 
 <script setup>
@@ -217,6 +218,8 @@ const typingTimer = ref(null)
 const imageLoading = ref(true)
 const imageError = ref(false)
 const showLightbox = ref(false)
+const imageDownloading = ref(false)
+const imageDownloadTip = ref('')
 
 // 图片加载事件
 const onImageLoad = () => {
@@ -246,10 +249,15 @@ const closeLightbox = () => {
 // 下载图片
 const downloadImage = async () => {
   const imageUrl = props.data?.url
-  if (!imageUrl) return
+  if (!imageUrl || imageDownloading.value) return
 
+  imageDownloading.value = true
+  imageDownloadTip.value = ''
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000)
   try {
-    const response = await fetch(imageUrl)
+    const response = await fetch(imageUrl, { signal: controller.signal })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -260,9 +268,17 @@ const downloadImage = async () => {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
+    imageDownloadTip.value = '图片下载已开始'
   } catch (error) {
     console.error('下载图片失败:', error)
     window.open(imageUrl, '_blank')
+    imageDownloadTip.value = '下载受限，已打开原图'
+  } finally {
+    window.clearTimeout(timeoutId)
+    imageDownloading.value = false
+    window.setTimeout(() => {
+      imageDownloadTip.value = ''
+    }, 2400)
   }
 }
 
@@ -329,7 +345,7 @@ const renderChart = async () => {
   mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     themeVariables: {
       darkMode: true,
       background: '#1e293b',
@@ -345,7 +361,7 @@ const renderChart = async () => {
     renderedChart.value = `<div class="mermaid-wrapper">${svg}</div>`
   } catch (e) {
     console.error('Mermaid render error:', e)
-    renderedChart.value = `<pre class="mermaid-fallback">${props.data.diagram}</pre>`
+    renderedChart.value = `<pre class="mermaid-fallback">${String(props.data.diagram).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
   }
 }
 
@@ -367,7 +383,10 @@ const renderMarkdown = (content) => {
   if (!content) return ''
 
   // 简单的 Markdown 处理
-  return content
+  return String(content)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code>$1</code>')
@@ -390,13 +409,9 @@ watch(() => props.data, (newData) => {
     displayedText.value = ''
   }
 
-  // 重置图片加载状态（只有新消息才需要动态更新图片状态）
-  if (props.enableTypewriter && props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
+  // 重置图片加载状态
+  if (props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
     imageLoading.value = true
-    imageError.value = false
-  } else if (props.responseType === RESPONSE_TYPES.IMAGE && newData?.url) {
-    // 历史消息的图片直接设置为已加载状态，避免触发加载动画
-    imageLoading.value = false
     imageError.value = false
   }
 }, { immediate: true })
@@ -419,14 +434,20 @@ onMounted(() => {
   if (props.responseType === RESPONSE_TYPES.CHART) {
     renderChart()
   }
-  // 处理图片初始状态
+  // 处理图片初始状态 - 检查图片是否已加载
   if (props.responseType === RESPONSE_TYPES.IMAGE && props.data?.url) {
     nextTick(() => {
       const img = document.querySelector(`img[src="${props.data.url}"]`)
       if (img && img.complete && img.naturalHeight > 0) {
+        // 图片已加载完成
         imageLoading.value = false
         imageError.value = false
+      } else if (img && img.complete) {
+        // 图片加载完成但出错
+        imageLoading.value = false
+        imageError.value = true
       }
+      // 如果图片未开始加载，保持 imageLoading = true，等待 @load 事件
     })
   }
 
@@ -711,20 +732,21 @@ onBeforeUnmount(() => {
 
 .image-wrapper {
   position: relative;
-  display: block;
-  width: 100%;
-  max-width: 600px;
-  height: 450px;
+  display: inline-block;
+  max-width: 100%;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .image-response img {
-  width: 100%;
-  height: 450px;
+  max-width: 100%;
+  max-height: 600px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: opacity 0.3s ease;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .image-response .generated-image {
@@ -760,9 +782,15 @@ onBeforeUnmount(() => {
   height: 18px;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.8);
   transform: scale(1.05);
+}
+
+.action-btn:disabled,
+.lightbox-download:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 /* Lightbox 模态框 */
@@ -853,7 +881,7 @@ onBeforeUnmount(() => {
   height: 18px;
 }
 
-.lightbox-download:hover {
+.lightbox-download:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
@@ -873,8 +901,10 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
+  min-width: 300px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -926,6 +956,13 @@ onBeforeUnmount(() => {
   color: #64748b;
   font-size: 13px;
   font-style: italic;
+}
+
+.download-tip {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
 }
 
 /* Document Response */

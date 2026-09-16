@@ -1,5 +1,7 @@
 <template>
   <div class="multiagent-app">
+    <AuroraBackground />
+
     <!-- 我的团队按钮 -->
     <button class="my-teams-btn" @click="goToMyTeams">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -22,6 +24,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import AuroraBackground from '../components/AuroraBackground.vue'
 import HeroSection from '../components/HeroSection.vue'
 import FilterBar from '../components/FilterBar.vue'
 import AgentGrid from '../components/AgentGrid.vue'
@@ -37,20 +40,21 @@ const goToMyTeams = () => {
 <style scoped>
 .multiagent-app {
   height: 100%;
-  min-width: 1350px;
-  background: #040915;
-  /* background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 100%); */
+  background: transparent;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding: 0 32px 32px 0;
+  padding: 0 32px 18px 0;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .my-teams-btn {

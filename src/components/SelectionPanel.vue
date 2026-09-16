@@ -1,7 +1,7 @@
 <template>
   <div class="selection-panel">
     <div class="panel-content">
-      <span class="selection-title">已选择 <span class="count-number">{{ selectedCount }}</span> 个 Agent：</span>
+      <span class="selection-title">已选择 <span class="count-number">{{ selectedCount }}</span> 个智能体：</span>
       <div class="selected-agents" :class="{ expanded: isExpanded }">
         <div
           v-for="agent in (isExpanded ? selectedAgentsArray : displayedAgents)"
@@ -18,7 +18,7 @@
             <LightBulbIcon v-else-if="agent.icon === 'lightbulb'" />
             <RocketLaunchIcon v-else />
           </span>
-          <span class="chip-name">{{ agent.name.replace(' Agent', '') }}</span>
+          <span class="chip-name">{{ agent.name }}</span>
           <button class="remove-btn" @click="removeAgent(agent.id)">
             <XMarkIcon />
           </button>
@@ -40,7 +40,7 @@
           <span>收起</span>
         </div>
         <div v-if="selectedAgentsArray.length === 0" class="empty-state">
-          请选择至少一个 Agent
+          请选择至少一个智能体
         </div>
       </div>
       <div class="divider"></div>
@@ -53,18 +53,22 @@
         <input
           type="text"
           v-model="teamName"
-          placeholder="请输入团队名称"
+          :placeholder="selectedCount > 0 && !teamName ? '请填写团队名称，再创建团队' : '请输入团队名称'"
           class="name-input"
         />
       </div>
       <button
         class="create-btn"
-        :disabled="selectedCount === 0 || !teamName"
+        :disabled="selectedCount === 0 || !teamName.trim()"
         @click="createTeam"
       >
         <span>创建团队</span>
         <ArrowRightIcon />
       </button>
+    </div>
+    <!-- 按钮置灰原因的可见提示，不再只藏在输入框 placeholder 里 -->
+    <div v-if="selectedCount > 0 && !teamName" class="create-hint">
+      请填写团队名称后再创建
     </div>
   </div>
 </template>
@@ -94,43 +98,27 @@ const {
   selectedCount,
   selectedAgentsArray,
   teamName,
-  clearSelection
+  clearSelection,
+  removeAgent
 } = useAgentSelection()
 
-const { addTeam } = useWorkspace()
+const { createTeam: createNewTeam } = useWorkspace()
 
-// 创建团队
+// 创建团队（字段构造统一在 useWorkspace.createTeam）
 const createTeam = () => {
   if (!teamName.value.trim() || selectedCount.value === 0) return
 
-  // 生成团队ID
-  const teamId = `team-${Date.now().toString().slice(-6)}`
-
-  const newTeam = {
-    id: teamId,
+  const newTeam = createNewTeam({
     name: teamName.value.trim(),
-    subtitle: '刚刚',
-    memberCount: selectedAgentsArray.value.length || 0,
-    color: 'linear-gradient(135deg, #6c5ce7, #a855f7)',
-    createdAt: new Date().toISOString(),
-    lastActivity: '刚刚',
-    description: `由 ${selectedAgentsArray.value.length || 0} 个 Agent 组成的团队`,
-    agents: selectedAgentsArray.value.map(agent => ({
-      ...agent,
-      status: agent.status || 'online'
-    }))
-  }
-
-  console.log('首页创建团队，保存到 localStorage:', newTeam.name)
-
-  // 保存到 teams 数组和 localStorage
-  addTeam(newTeam)
+    agents: selectedAgentsArray.value
+  })
 
   // 清空选中状态
   clearSelection()
+  teamName.value = ''
 
   // 导航到工作台
-  router.push({ name: 'workspace', params: { teamId } })
+  router.push({ name: 'workspace', params: { teamId: newTeam.id } })
 }
 
 // Display only first 5 agents
@@ -156,7 +144,7 @@ const toggleExpand = () => {
 .selection-panel {
   position: relative;
   width: calc(100% - 48px);
-  margin: 0 24px 24px;
+  margin: 0 24px 18px;
   border-radius: 16px;
   padding: 1px;
   flex-shrink: 0;
@@ -193,10 +181,18 @@ const toggleExpand = () => {
   border-radius: 15px;
   padding: 14px 24px;
   background: linear-gradient(180deg, rgba(4, 9, 21, 1), rgba(3, 8, 25, 1));
-  backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.create-hint {
+  position: absolute;
+  bottom: 4px;
+  right: 28px;
+  font-size: 11px;
+  color: #f0b429;
+  pointer-events: none;
 }
 
 .selection-title {
@@ -290,7 +286,7 @@ const toggleExpand = () => {
   cursor: pointer;
   transition: all 0.2s;
   padding: 0;
-  color: #636e72;
+  color: #9aa5b1;
   flex-shrink: 0;
 }
 
@@ -356,7 +352,7 @@ const toggleExpand = () => {
 }
 
 .empty-state {
-  color: #636e72;
+  color: #9aa5b1;
   font-size: 13px;
   padding: 6px 0;
 }
@@ -402,7 +398,7 @@ const toggleExpand = () => {
 }
 
 .name-input::placeholder {
-  color: #636e72;
+  color: #9aa5b1;
 }
 
 .name-input:focus {

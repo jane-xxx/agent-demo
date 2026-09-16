@@ -1,19 +1,18 @@
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 // Agent data
 const AGENTS = [
   {
     id: 1,
-    name: 'Chat Agent',
+    name: '对话智能体',
     description: '擅长自然语言对话，理解上下文，提供流畅的交互体验',
     tags: ['对话', '问答', '通用'],
-    category: '全部',
+    category: '内容创作',
     icon: 'chat'
   },
   {
     id: 2,
-    name: 'Research Agent',
+    name: '调研智能体',
     description: '专业的研究分析助手，快速搜索、整理和分析各类信息',
     tags: ['搜索', '分析', '研究'],
     category: '研究分析',
@@ -21,7 +20,7 @@ const AGENTS = [
   },
   {
     id: 3,
-    name: 'Writing Agent',
+    name: '写作智能体',
     description: '专业的文案创作助手，支持多种文体和风格的写作',
     tags: ['写作', '文案', '创作'],
     category: '内容创作',
@@ -29,31 +28,31 @@ const AGENTS = [
   },
   {
     id: 4,
-    name: 'Code Agent',
+    name: '代码智能体',
     description: '专业的代码助手，支持多种编程语言和开发任务',
     tags: ['代码', '开发', '调试'],
-    category: '开发工具',
+    category: '开发效率',
     icon: 'code'
   },
   {
     id: 5,
-    name: 'Data Analyst Agent',
+    name: '数据分析智能体',
     description: '数据分析专家，处理复杂数据集并提供可视化洞察',
     tags: ['数据', '分析', '可视化'],
-    category: '数据分析',
+    category: '研究分析',
     icon: 'chart'
   },
   {
     id: 6,
-    name: 'Design Agent',
+    name: '设计智能体',
     description: '创意设计助手，提供设计灵感和视觉创意支持',
     tags: ['设计', '创意', '视觉'],
-    category: '设计创意',
+    category: '内容创作',
     icon: 'palette'
   },
   {
     id: 7,
-    name: 'Strategy Agent',
+    name: '战略智能体',
     description: '战略规划专家，帮助制定长期策略和决策分析',
     tags: ['战略', '规划', '决策'],
     category: '研究分析',
@@ -61,23 +60,20 @@ const AGENTS = [
   },
   {
     id: 8,
-    name: 'Product Agent',
+    name: '产品智能体',
     description: '产品管理助手，从需求分析到产品规划全流程支持',
     tags: ['产品', '规划', '需求'],
-    category: '效率提升',
+    category: '开发效率',
     icon: 'rocket'
   }
 ]
 
-// Categories with colors
+// Categories with colors（收敛为 3 个分类，保证每类至少 2 个智能体）
 const CATEGORIES = [
   { id: '全部', label: '全部', color: '#6c5ce7' },
   { id: '内容创作', label: '内容创作', color: '#a855f7' },
-  { id: '数据分析', label: '数据分析', color: '#e17055' },
-  { id: '开发工具', label: '开发工具', color: '#00b894' },
-  { id: '设计创意', label: '设计创意', color: '#d63031' },
   { id: '研究分析', label: '研究分析', color: '#3498db' },
-  { id: '效率提升', label: '效率提升', color: '#00cec9' }
+  { id: '开发效率', label: '开发效率', color: '#00b894' }
 ]
 
 // Category color mapping
@@ -94,13 +90,6 @@ const teamName = ref('')
 const currentTeam = ref(null) // Store current team data
 
 export function useAgentSelection() {
-  const router = useRouter()
-
-  // Generate unique team ID (与 TeamWorkspace 保持一致)
-  const generateTeamId = () => {
-    return 'team-' + Date.now().toString().slice(-6)
-  }
-
   // Computed
   const filteredAgents = computed(() => {
     let agents = AGENTS
@@ -167,22 +156,6 @@ export function useAgentSelection() {
     selectedAgents.value = new Set()
   }
 
-  const createTeam = () => {
-    const teamId = generateTeamId()
-    const teamData = {
-      teamId,
-      name: teamName.value,
-      agents: [...selectedAgentsArray.value],
-      createdAt: new Date().toISOString()
-    }
-    currentTeam.value = teamData
-    teamName.value = ''
-    // 清空选中状态
-    clearSelection()
-    // Navigate to workspace page
-    router.push({ name: 'workspace', params: { teamId } })
-  }
-
   return {
     // State
     selectedAgents,
@@ -205,7 +178,6 @@ export function useAgentSelection() {
     removeAgent,
     setCategory,
     setSearchQuery,
-    createTeam,
     clearSelection
   }
 }

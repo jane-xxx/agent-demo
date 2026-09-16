@@ -93,10 +93,15 @@ const toggleSelection = () => {
   cursor: pointer;
   min-height: 220px;
   border-radius: 14px;
-  /* background: rgba(30, 39, 46, 0.6); */
-  background: #080d19;
+  /* 不用 backdrop-filter：背后是持续动画的极光背景，
+     会导致每张卡每帧重新采样+模糊（15 张卡 GPU 爆炸）。
+     背景本身就是柔和渐变，提高底色不透明度补偿玻璃质感 */
+  background: rgba(8, 13, 25, 0.55);
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .agent-card::before {
@@ -105,7 +110,7 @@ const toggleSelection = () => {
   inset: 0;
   border-radius: 14px;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.03));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -135,7 +140,8 @@ const toggleSelection = () => {
 
 .agent-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--agent-color) 20%, transparent);
+  background: rgba(8, 13, 25, 0.45);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--agent-color) 25%, transparent);
 }
 
 .agent-card:hover .card-shine {
@@ -143,8 +149,42 @@ const toggleSelection = () => {
 }
 
 .agent-card.selected {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--agent-color) 6%, transparent) 0%, color-mix(in srgb, var(--agent-color) 1%, transparent) 100%);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--agent-color) 20%, transparent), 0 0 0 1px color-mix(in srgb, var(--agent-color) 50%, transparent);
+  background: linear-gradient(135deg,
+    rgba(8, 13, 25, 0.65) 0%,
+    color-mix(in srgb, var(--agent-color) 12%, rgba(8, 13, 25, 0.6)) 100%
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--agent-color) 60%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* 呼吸光晕改用伪元素 + opacity 动画（合成器线程处理，零重绘），
+   而不是直接动画 box-shadow（每帧重绘整卡） */
+.agent-card.selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  box-shadow: 0 0 30px color-mix(in srgb, var(--agent-color) 35%, transparent);
+  opacity: 0.45;
+  animation: selectedPulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes selectedPulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-card.selected::after {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .agent-card.selected::before {
@@ -210,7 +250,6 @@ const toggleSelection = () => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--agent-color);
   padding: 0;
-  backdrop-filter: blur(4px);
 }
 
 .select-indicator:hover {
@@ -269,7 +308,7 @@ const toggleSelection = () => {
   color: #b2bec3;
   font-weight: 500;
   letter-spacing: 0.02em;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .agent-card:hover .tag {

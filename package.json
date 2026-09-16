@@ -4,6 +4,7 @@
   "description": "MultiAgent Team Selection Page built with Vue 3",
   "type": "module",
   "scripts": {
+    "test:collaboration": "node src/test-collaboration.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

@@ -1,8 +1,13 @@
 <template>
   <div class="team-workspace">
-    <LeftSidebar />
+    <div class="compact-toolbar">
+      <button :aria-expanded="leftOpen" @click="leftOpen = !leftOpen; rightOpen = false">团队</button>
+      <button v-if="hasTeamId" :aria-expanded="rightOpen" @click="rightOpen = !rightOpen; leftOpen = false">成员与进度</button>
+    </div>
+    <button v-if="leftOpen || rightOpen" class="sidebar-backdrop" aria-label="关闭侧栏" @click="leftOpen = false; rightOpen = false"></button>
+    <LeftSidebar :class="{ 'compact-open': leftOpen }" />
     <CenterChat />
-    <RightSidebar v-if="hasTeamId" />
+    <RightSidebar v-if="hasTeamId" :class="{ 'compact-open': rightOpen }" />
 
     <CreateTeamModal
       :is-open="isCreateTeamModalOpen"
@@ -27,8 +32,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+const leftOpen = ref(false)
+const rightOpen = ref(false)
+import { useRoute, useRouter } from 'vue-router'
 import { useModal } from '../composables/useModal'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useAgentSelection } from '../composables/useAgentSelection'
@@ -40,6 +47,7 @@ import AgentDetailModal from '../components/workspace/AgentDetailModal.vue'
 import ConfirmDialog from '../components/common/ConfirmDialog.vue'
 
 const route = useRoute()
+const router = useRouter()
 
 // 检查是否有 teamId
 const hasTeamId = computed(() => {
@@ -59,46 +67,32 @@ const {
   confirmAction
 } = useModal()
 
-const { addTeam, updateAgentStatus, switchTeam } = useWorkspace()
+const { createTeam, updateAgentStatus, switchTeam, teams } = useWorkspace()
 const { clearSelection } = useAgentSelection()
+
+// 无 teamId 进入且已有团队时，直接落到第一个团队，
+// 避免「左侧列表有团队、中间却显示还没有团队」的矛盾。
+// 用 watch(immediate) 覆盖：首次进入、直接访问 URL、删除当前团队后的同组件跳转
+watch(() => route.params.teamId, () => {
+  leftOpen.value = false
+  rightOpen.value = false
+  if (!route.params.teamId && teams.value.length > 0) {
+    router.replace({ name: 'workspace', params: { teamId: teams.value[0].id } })
+  }
+}, { immediate: true })
 
 const confirmMessage = ref('')
 
 const handleCreateTeam = (teamData) => {
-  console.log('=== 开始创建团队 ===')
-  console.log('接收到的团队数据:', teamData)
-
-  // 生成团队ID（与mock数据格式一致）
-  const teamId = `team-${Date.now().toString().slice(-6)}`
-
-  const newTeam = {
-    id: teamId,
-    name: teamData.name,
-    subtitle: '刚刚',
-    memberCount: teamData.agents?.length || 0,
-    color: 'linear-gradient(135deg, #6c5ce7, #a855f7)',
-    createdAt: new Date().toISOString(),
-    lastActivity: '刚刚',
-    description: `由 ${teamData.agents?.length || 0} 个 Agent 组成的团队`,
-    // 确保 agents 有所有必要的字段
-    agents: (teamData.agents || []).map(agent => ({
-      ...agent,
-      status: agent.status || 'online' // 默认在线
-    }))
-  }
-
-  console.log('准备添加的团队对象:', newTeam)
-  console.log('调用 addTeam 函数...')
-  addTeam(newTeam)
+  // 字段构造统一在 useWorkspace.createTeam
+  const newTeam = createTeam(teamData)
   closeCreateTeamModal()
 
   // 清空选中状态
   clearSelection()
 
   // 切换到新创建的团队
-  console.log('准备切换到新团队:', teamId)
-  switchTeam(teamId)
-  console.log('=== 团队创建完成 ===')
+  switchTeam(newTeam.id)
 }
 
 const handleConfirm = () => {
@@ -116,5 +110,18 @@ const handleConfirm = () => {
   display: flex;
   background: #0a0e1a;
   overflow: hidden;
+}
+.compact-toolbar, .sidebar-backdrop { display: none; }
+@media (max-width: 1100px) {
+  .team-workspace { position: relative; padding-top: 42px; min-width: 0; }
+  .compact-toolbar { display: flex; position: absolute; top: 0; left: 0; right: 0; height: 42px; justify-content: space-between; padding: 6px 12px; background: #0f141f; border-bottom: 1px solid #ffffff0b; }
+  .compact-toolbar button { background: #202639; border: 1px solid #ffffff18; color: #ddd; border-radius: 6px; padding: 3px 12px; cursor: pointer; }
+  .team-workspace :deep(.left-sidebar), .team-workspace :deep(.right-sidebar) { display: none; position: absolute; top: 42px; bottom: 0; height: auto; z-index: 21; max-width: 85vw; }
+  .team-workspace :deep(.left-sidebar) { left: 0; }
+  .team-workspace :deep(.right-sidebar) { right: 0; }
+  .team-workspace :deep(.compact-open) { display: flex; }
+  .sidebar-backdrop { display: block; position: absolute; inset: 42px 0 0; border: 0; background: #0008; z-index: 20; }
+  .team-workspace :deep(.chat-header) { padding: 12px; }
+  .team-workspace :deep(.message-agent) { max-width: 95%; }
 }
 </style>

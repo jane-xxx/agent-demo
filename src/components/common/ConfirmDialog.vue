@@ -17,7 +17,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { onBeforeUnmount } from 'vue'
+
+const props = defineProps({
   isOpen: {
     type: Boolean,
     required: true
@@ -41,6 +43,13 @@ const confirm = () => {
 const cancel = () => {
   emit('cancel')
 }
+
+// 支持 Esc 取消
+const onKeydown = (e) => {
+  if (e.key === 'Escape' && props.isOpen) cancel()
+}
+window.addEventListener('keydown', onKeydown)
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>

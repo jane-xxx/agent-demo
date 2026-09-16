@@ -672,7 +672,8 @@ describe('useCounter', () => {
               type: RESPONSE_TYPES.IMAGE,
               data: {
                 url: 'https://picsum.photos/seed/ui-design/800/600',
-                alt: 'UI 设计稿'
+                alt: '图片呈现占位示例（随机照片，非 UI 设计稿）',
+                caption: '仅用于演示图片加载、预览与下载，不是生成的界面设计。'
               }
             },
             {
